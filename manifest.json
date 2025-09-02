@@ -1,0 +1,21 @@
+{
+  "name": "Sort your variants",
+  "id": "1531668466322691802",
+  "api": "1.0.0",
+  "main": "code.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "ui": "ui.html",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://fonts.googleapis.com",
+      "https://fonts.gstatic.com",
+      "https://cdn.tailwindcss.com",
+      "https://cdn.jsdelivr.net"
+    ]
+  }
+}
