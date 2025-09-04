@@ -8,8 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Inter:ital,wght@0,400..900;1,400..900&family=Lato:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Montserrat:ital,wght@0,400;0,700;1,400;1,700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Roboto+Slab:wght@400;700;900&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-<!-- Sortable for drag reordering -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<!-- SortableJS removed as it's no longer needed -->
 <style>
 /* --- UI Kit Base & Variables --- */
 :root {
@@ -126,36 +125,97 @@ padding: 0 12px; height: 32px; line-height: 1; position: relative; }
 
 .empty-state { display: flex; align-items: center; gap: 8px; background-color: var(--surface); border-radius: var(--radius); padding: 12px 16px; text-align: left; color: var(--text-muted); font-size: 14px; }
 .reorder-list { display: grid; gap: 8px; }
-.reorder-item { display: flex; align-items: center; gap: 10px; background: var(--editor-bg); padding: 8px 12px; border-radius: var(--radius); border: 0.5px solid transparent; transition: border-color .12s, box-shadow .12s; user-select: none; cursor: grab; }
-.reorder-item:hover { border-color: var(--border); }
-.reorder-item:active { cursor: grabbing; }
-.reorder-item[aria-grabbed="true"], .reorder-item.sortable-ghost { box-shadow: 0 0 0 1px var(--ring-color) inset; opacity: 0.5; }
-.sortable-ghost { opacity: 0.4 !important; background: var(--muted) !important; }
-.sortable-chosen { cursor: grabbing !important; }
-.sortable-drag { transform: rotate(5deg); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); }
-.drag-handle { color: var(--text-muted); flex-shrink: 0; display: inline-flex; align-items: center; padding: 4px; border-radius: var(--radius); user-select: none; }
-    .reorder-title { font-weight: 600; color: var(--text); font-size: 14px; }
-    .reorder-values { font-size: 12px; color: var(--text-muted); }
-    /* left column inside item (title + values) */
-    .reorder-item .meta-left { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; }
-    /* top row inside item: title at left, role at right (auto-layout-like) */
-    .reorder-item .meta-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .reorder-title { font-weight: 600; color: var(--text); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    /* role label placed on the same top row, right aligned */
-    .reorder-item .item-role { font-size: 12px; color: var(--text-muted); text-align: right; white-space: nowrap; flex-shrink: 0; margin-left: 12px; }
-    /* values row spans full width beneath and truncates to one line */
-    .reorder-values { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
 
-/* Role dropdown inside item */
-.reorder-item .role-dropdown { position: relative; min-width: 140px; flex-shrink: 0; }
-.reorder-item .role-input { height: 28px; padding: 0 10px; background: #c2c2c2; border-radius: var(--radius); border: none; color: var(--text); width: 100%; outline: none; font-size: 13px; cursor: pointer; }
-.reorder-item .role-panel { width: 100%; }
-.reorder-item .meta-top { gap: 8px; }
-.reorder-item .reorder-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* --- MODIFICADO: Estilo del nuevo ítem de la lista --- */
+.reorder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Clave para alinear contenido y select */
+    gap: 10px;
+    background: var(--editor-bg);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 0.5px solid transparent;
+    transition: border-color .12s, box-shadow .12s;
+    user-select: none;
+}
+.reorder-item:hover { border-color: var(--border); }
+
+/* Contenido de texto a la izquierda */
+.reorder-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-grow: 1;
+    min-width: 0; /* Evita que el texto empuje al select */
+}
+.reorder-title {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.reorder-values {
+    font-size: 12px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+}
+
+/* --- NUEVO: Estilos para el dropdown de roles personalizado --- */
+.role-dropdown-wrapper {
+    position: relative;
+    width: 96px; /* Ancho del input */
+    flex-shrink: 0; /* Evita que se encoja */
+}
+.role-select-trigger {
+    width: 100%;
+    height: 24px;
+    padding: 0 24px 0 8px; /* Espacio para texto y chevron */
+    font-size: 12px;
+    text-align: left;
+    color: var(--text);
+    background-color: var(--surface); /* Fondo del input (#2C2C2C) */
+    border-radius: var(--radius);
+    border: none; /* Sin bordes */
+    cursor: pointer;
+    outline: none;
+    transition: box-shadow .12s;
+}
+.role-select-trigger:focus-visible {
+    box-shadow: var(--ring);
+}
+.role-dropdown-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 4px;
+    background-image: url('data:image/svg+xml;utf8,<svg width="8" height="4" viewBox="0 0 8 4" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 0.5L4 3.5L7 0.5" stroke="white" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    background-repeat: no-repeat;
+    pointer-events: none;
+}
+/* Asegura que el panel del dropdown de roles tenga un ancho mínimo y permita que CSS controle el width */
+.role-dropdown-wrapper .dropdown-panel {
+    /* Hacer que el panel tenga exactamente el ancho del input y se alinee a la derecha
+       para que, si sobresale, lo haga por la izquierda. */
+    width: 96px;
+    min-width: 0;
+    right: 0;
+    left: auto;
+    box-sizing: border-box;
+}
+/* FIN DE ESTILOS NUEVOS */
+
 .info-notification { background-color: var(--editor-bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; line-height: 1.6; color: var(--text-muted); }
 .info-notification p { margin: 0; font-size: 12px; }
 .info-notification strong { color: var(--text); font-weight: 600; display: block; margin-bottom: 2px; font-size: 14px; }
-
 .info-notification.with-divider {
     margin-top: 16px;
     padding-top: 16px;
@@ -180,21 +240,22 @@ padding: 0 12px; height: 32px; line-height: 1; position: relative; }
 
 /* --- DROPDOWN GENERAL --- */
 .dropdown { position: relative; }
-.dropdown-panel { 
-    position: absolute; 
-    top: calc(100% + 4px); 
-    left: 0; 
-    z-index: 10; 
-    background: var(--surface); 
-    border: 1px solid var(--border); 
-    border-radius: var(--radius-lg); 
-    padding: 6px; 
-    box-shadow: var(--shadow-md); 
-    opacity: 0; 
-    transform: translateY(-4px); 
-    pointer-events: none; 
-    transition: opacity .15s, transform .15s; 
-    box-sizing: border-box; 
+.dropdown-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 10;
+    width: 100%; /* For role dropdown */
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 6px;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity .15s, transform .15s;
+    box-sizing: border-box;
 }
 .dropdown-panel { max-width: min(320px, calc(100vw - 32px)); }
 .dropdown-panel.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
@@ -207,6 +268,9 @@ padding: 0 12px; height: 32px; line-height: 1; position: relative; }
 .dropdown-panel--scrollable::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 .dropdown-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius); cursor: pointer; font-size: 14px; color: var(--text); background-color: transparent; border: none; width: 100%; text-align: left; }
 .dropdown-item:hover { background: var(--muted); }
+.role-dropdown-wrapper .dropdown-item {
+    font-size: 12px;
+}
 .dropdown-panel.align-right { left: auto; right: 0; }
 
 /* --- DROPDOWN ESPECÍFICO --- */
@@ -214,20 +278,20 @@ padding: 0 12px; height: 32px; line-height: 1; position: relative; }
     width: 100%;
     max-width: calc(100vw - 32px);
 }
-.color-palette-panel { 
-    padding: 12px; 
-    box-sizing: border-box; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 12px; 
+.color-palette-panel {
+    padding: 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     width: max-content;
 }
 .color-palette__family + .color-palette__family { margin-top: 0; }
 .color-palette__title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 0 4px 4px; }
-.color-palette__swatches { 
-    display: flex; 
+.color-palette__swatches {
+    display: flex;
     flex-wrap: nowrap;
-    gap: 6px; 
+    gap: 6px;
 }
 .color-palette__swatch { width: 20px; height: 20px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 0; background-color: transparent; }
 
@@ -275,20 +339,17 @@ img, svg {
 <!-- REORDER PROPERTIES -->
 <section aria-labelledby="reorder-title">
 <header class="section-header">
-<h2 id="reorder-title" class="section-title">Reorder Properties</h2>
-<p class="section-description">Drag properties to define columns, rows, and groups</p>
+<h2 id="reorder-title" class="section-title">Property Roles</h2>
+<p class="section-description">Assign a role to each property to define columns, rows, and groups</p>
 </header>
 <div class="section-body">
 <div id="reorderList" class="reorder-list" role="list" aria-describedby="reorder-title">
 <!-- JS populates items -->
 </div>
-<div class="info-notification">
-  <p><strong>Layout Organization</strong> The first property defines rows, the second defines columns, the third creates column groups, and the rest create row groups.</p>
-</div>
 </div>
 </section>
 
-<!-- SPACING -->
+<!-- SPACING (Sin cambios) -->
 <section aria-labelledby="spacing-title">
 <header class="section-header">
 <h2 id="spacing-title" class="section-title">Spacing</h2>
@@ -312,7 +373,7 @@ img, svg {
 </div>
 </section>
 
-<!-- TAG OPTIONS -->
+<!-- TAG OPTIONS (Sin cambios) -->
 <section aria-labelledby="tags-title">
 <header class="section-header">
 <h2 id="tags-title" class="section-title">Tag Options</h2>
@@ -432,7 +493,7 @@ img, svg {
 </div>
 </section>
 
-<!-- PREVIEW -->
+<!-- PREVIEW (Sin cambios) -->
 <section aria-labelledby="preview-title">
 <header class="section-header">
 <h2 id="preview-title" class="section-title">Preview</h2>
@@ -449,7 +510,7 @@ img, svg {
 </div>
 </section>
 
-<!-- ACTIONS -->
+<!-- ACTIONS (Sin cambios) -->
 <div class="actions">
 <button id="resetBtn" class="btn btn--secondary">Reset Defaults</button>
 <button id="organizeBtn" class="btn btn--default" disabled>
@@ -508,7 +569,6 @@ const els = {
 };
 
 
-let sortableInstance = null;
 let hasSelection = false;
 let allFontsByFamily = {};
 let appState = {};
@@ -517,40 +577,63 @@ let historyIndex = -1;
 const MAX_HISTORY_STATES = 50;
 
 /** Role mapping state */
-let roleByProp = {}; // { [propName]: 'column'|'row'|'group-column'|'group-row' }
+let roleByProp = {}; // { [propName]: 'column'|'row'|'column-group'|'row-group' }
 const UNIQUE_ROLES = ['column', 'row'];
+let currentPropertyOrder = [];
 
+/** ---- NUEVO: Orden predeterminado actualizado ---- */
 function computeDefaultRoles(keys) {
   const map = {};
   keys.forEach((k, i) => {
     if (i === 0) map[k] = 'column';
-    else if (i === 1) map[k] = 'row';
-    else if (i === 2) map[k] = 'group-column';
-    else map[k] = 'group-row';
+    else if (i === 1) map[k] = 'row-group'; // El segundo es row-group'
+    else if (i === 2) map[k] = 'column-group';
+    else map[k] = 'row-group';
   });
   return map;
 }
 
 function ensureAllPropsHaveRoles(keys) {
-  // Initialize default roles when missing; preserve existing choices
-  if (!keys.length) return;
-  if (Object.keys(roleByProp).length === 0) roleByProp = computeDefaultRoles(keys);
-  keys.forEach((k, i) => {
-    if (!roleByProp[k]) {
-      roleByProp[k] = (i === 0) ? 'column' : (i === 1) ? 'row' : (i === 2) ? 'group-column' : 'group-row';
+  if (!keys.length) { roleByProp = {}; return; }
+  
+  const defaultRoles = computeDefaultRoles(keys);
+  const newRoleMap = {};
+  const assignedUniqueRoles = {}; // Tracks which prop holds a unique role
+
+  // First pass: respect existing valid choices
+  keys.forEach(key => {
+    const existingRole = roleByProp[key];
+    if (existingRole) {
+      if (UNIQUE_ROLES.includes(existingRole)) {
+        if (!assignedUniqueRoles[existingRole]) {
+          newRoleMap[key] = existingRole;
+          assignedUniqueRoles[existingRole] = key;
+        }
+      } else {
+        newRoleMap[key] = existingRole;
+      }
     }
   });
-  // Drop roles from props that no longer exist
-  Object.keys(roleByProp).forEach(k => { if (!keys.includes(k)) delete roleByProp[k]; });
+
+  // Second pass: fill in the blanks using defaults, avoiding unique conflicts
+  keys.forEach(key => {
+    if (!newRoleMap[key]) {
+      let roleToAssign = defaultRoles[key];
+      if (UNIQUE_ROLES.includes(roleToAssign) && assignedUniqueRoles[roleToAssign]) {
+        // Default is unique and taken, find a non-unique fallback
+        roleToAssign = 'row-group'; // A safe fallback
+      }
+      newRoleMap[key] = roleToAssign;
+      if (UNIQUE_ROLES.includes(roleToAssign)) {
+        assignedUniqueRoles[roleToAssign] = key;
+      }
+    }
+  });
+
+  roleByProp = newRoleMap;
 }
 
-function swapUniqueRole(holderProp, newHolderProp, fallbackRole) {
-  // Move the unique role from holderProp to newHolderProp and give holder a fallback
-  const prevRole = roleByProp[newHolderProp];
-  roleByProp[holderProp] = prevRole && prevRole !== roleByProp[holderProp] ? prevRole : (fallbackRole || 'group-row');
-}
-
-/* ---------- State Management ---------- */
+/* ---------- State Management (Sin Cambios) ---------- */
 function getInitialState() {
     return {
         spacing: { padding: 48, gap: 48, groups: 128 },
@@ -577,11 +660,11 @@ function saveStateSnapshot() {
 
 function updateUIFromState(stateToRender) {
     const { spacing, tagOptions } = stateToRender;
-    
+
     els.paddingInput.value = spacing.padding;
     els.gapInput.value = spacing.gap;
     els.groupsInput.value = spacing.groups;
-    
+
     els.tagFillToggle.checked = tagOptions.enableFill;
     els.tagFillHex.value = tagOptions.fillColor;
     els.tagStrokeToggle.checked = tagOptions.enableStroke;
@@ -604,7 +687,7 @@ function updateUIFromState(stateToRender) {
     updatePreview();
 }
 
-/* ---------- Render Helpers ---------- */
+/* ---------- Render Helpers (Modificados) ---------- */
 function setSelectionState(enabled){
     hasSelection = !!enabled;
     els.organizeBtn.disabled = !enabled;
@@ -617,24 +700,25 @@ function setSelectionState(enabled){
 }
 
 function clearReorderList(){
-    if (sortableInstance) {
-        try { sortableInstance.destroy(); } catch (e) { console.warn('Error destroying sortable instance:', e); }
-        sortableInstance = null;
-    }
     els.reorderList.innerHTML = `<div class="empty-state"><span>No properties to display</span></div>`;
-    const notification = els.reorderList.parentElement.querySelector('.info-notification');
-    if (notification) notification.classList.remove('with-divider');
+    // notification removed: no-op
 }
 
+/** ---- FUNCIÓN COMPLETAMENTE RECONSTRUIDA ---- */
 function renderProperties(propertyKeys, properties){
+    currentPropertyOrder = [...propertyKeys];
     els.reorderList.innerHTML = '';
-    
-    const notification = els.reorderList.parentElement.querySelector('.info-notification');
-    if (propertyKeys.length > 0 && notification) {
-        notification.classList.add('with-divider');
-    }
 
-    propertyKeys.forEach((key, idx) => {
+    // notification removed: no-op
+
+    const roleOptions = [
+        { value: 'column', label: 'Column' },
+        { value: 'row', label: 'Row' },
+    { value: 'column-group', label: 'Col Group' },
+        { value: 'row-group', label: 'Row Group' }
+    ];
+
+    propertyKeys.forEach((key) => {
         const cleanKey = key.replace(/^State=/, '');
         const values = (properties?.[key]?.values || []).map(val => val.replace(/^State=/, '')).join(', ');
         const item = document.createElement('div');
@@ -642,127 +726,88 @@ function renderProperties(propertyKeys, properties){
         item.dataset.property = key;
         item.setAttribute('role','listitem');
         item.setAttribute('aria-label', `Property ${cleanKey}`);
+
+        // Estructura del dropdown personalizado
         item.innerHTML = `
-  <div class="drag-handle" aria-hidden="true">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M5 3C5.55228 3 6 3.44772 6 4C6 4.55228 5.55228 5 5 5C4.44772 5 4 4.55228 4 4C4 3.44772 4.44772 3 5 3ZM5 7C5.55228 7 6 7.44772 6 8C6 8.55228 5.55228 9 5 9C4.44772 9 4 8.55228 4 8C4 7.44772 4.44772 7 5 7ZM6 12C6 11.4477 5.55228 11 5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13C5.55228 13 6 12.5523 6 12ZM11 3C11.5523 3 12 3.44772 12 4C12 4.55228 11.5523 5 11 5C10.4477 5 10 4.55228 10 4C10 3.44772 10.4477 3 11 3ZM11 7C11.5523 7 12 7.44772 12 8C12 8.55228 11.5523 9 11 9C10.4477 9 10 8.55228 10 8C10 7.44772 10.4477 7 11 7ZM12 12C12 11.4477 11.5523 11 11 11C10.4477 11 10 11.4477 10 12C10 12.5523 10.4477 13 11 13C11.5523 13 12 12.5523 12 12Z"></path>
-    </svg>
-  </div>
-  <div class="meta-left">
-    <div class="meta-top">
-      <div class="reorder-title" title="${cleanKey}">${cleanKey}</div>
-      <div class="role-dropdown">
-        <div class="dropdown">
-          <input type="text" class="role-input" readonly value="" aria-label="Select role" />
-          <div class="dropdown-panel role-panel" role="listbox"></div>
-        </div>
-      </div>
-    </div>
-    <div class="reorder-values" title="${values}">${values}</div>
-  </div>`;
+          <div class="reorder-item-content">
+            <div class="reorder-title" title="${cleanKey}">${cleanKey}</div>
+            <div class="reorder-values" title="${values}">${values}</div>
+          </div>
+          <div class="dropdown role-dropdown-wrapper">
+            <input type="text" class="role-select-trigger" readonly />
+            <div class="dropdown-panel"></div>
+          </div>
+        `;
         els.reorderList.appendChild(item);
 
-        // Init role control for this property
-        const roleInput = item.querySelector('.role-input');
-        const rolePanel = item.querySelector('.role-panel');
         const propKey = key;
+        const trigger = item.querySelector('.role-select-trigger');
+        const panel = item.querySelector('.dropdown-panel');
+        
+        const labelForRole = (role) => (roleOptions.find(o => o.value === role) || {}).label || 'N/A';
+        
+        // Setea el valor inicial del input
+        trigger.value = labelForRole(roleByProp[propKey]);
 
-        function labelForRole(r){
-          return r === 'column' ? 'Column' : r === 'row' ? 'Row' : r === 'group-column' ? 'Group Column' : 'Group Row';
-        }
-        function renderRolePanel(){
-          rolePanel.innerHTML = '';
-          [
-            {v:'column', t:'Column'},
-            {v:'row', t:'Row'},
-            {v:'group-row', t:'Group Row'},
-            {v:'group-column', t:'Group Column'}
-          ].forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'dropdown-item';
-            btn.textContent = opt.t;
-            btn.onclick = () => {
-              const newRole = opt.v;
-              const prevRole = roleByProp[propKey];
-              // Enforce uniqueness for column/row with swap semantics
-              if (UNIQUE_ROLES.includes(newRole)) {
-                const holder = Object.keys(roleByProp).find(k => roleByProp[k] === newRole && k !== propKey);
-                if (holder) {
-                  swapUniqueRole(holder, propKey, prevRole);
-                  // Update holder's input text
-                  const holderEl = els.reorderList.querySelector(`.reorder-item[data-property="${CSS.escape(holder)}"] .role-input`);
-                  if (holderEl) holderEl.value = labelForRole(roleByProp[holder]);
+        // Evento para abrir/cerrar el panel
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isShowing = panel.classList.toggle('show');
+            if (isShowing) {
+                closeAllDropdowns(panel);
+                panel.innerHTML = ''; // Limpiar opciones anteriores
+                roleOptions.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'dropdown-item';
+                    btn.textContent = opt.label;
+                    btn.dataset.value = opt.value;
+                    panel.appendChild(btn);
+                });
+            }
+        });
+
+        // Evento para seleccionar una opción
+        panel.addEventListener('click', (e) => {
+            const target = e.target.closest('.dropdown-item');
+            if (!target) return;
+
+            const newRole = target.dataset.value;
+            const prevRole = roleByProp[propKey];
+
+            if (newRole === prevRole) { // No change
+                closeAllDropdowns();
+                return;
+            }
+
+            // ---- LÓGICA DE INTERCAMBIO (SWAP) ----
+            if (UNIQUE_ROLES.includes(newRole)) {
+                const holderKey = Object.keys(roleByProp).find(k => roleByProp[k] === newRole && k !== propKey);
+                if (holderKey) {
+                    roleByProp[holderKey] = prevRole; // El antiguo dueño toma el rol previo del actual
+                    const holderTrigger = els.reorderList.querySelector(`[data-property="${CSS.escape(holderKey)}"] .role-select-trigger`);
+                    if (holderTrigger) holderTrigger.value = labelForRole(prevRole);
                 }
-              }
-              roleByProp[propKey] = newRole;
-              roleInput.value = labelForRole(newRole);
-              closeAllDropdowns();
-            };
-            rolePanel.appendChild(btn);
-          });
-        }
-        roleInput.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const panel = rolePanel;
-          const isShowing = panel.classList.toggle('show');
-          if (isShowing) {
-            closeAllDropdowns(panel);
-            renderRolePanel();
-            const rect = roleInput.getBoundingClientRect();
-            const viewportH = window.innerHeight;
-            const ph = Math.min(320, panel.scrollHeight);
-            panel.classList.toggle('up', (viewportH - rect.bottom) < ph && rect.top > ph);
-          }
+            }
+
+            roleByProp[propKey] = newRole;
+            trigger.value = labelForRole(newRole);
+            closeAllDropdowns();
         });
-        roleInput.addEventListener('blur', () => setTimeout(() => { if (!rolePanel.matches(':hover')) rolePanel.classList.remove('show'); }, 150));
-        // Set initial label
-        roleInput.value = labelForRole(roleByProp[propKey] || 'group-row');
     });
-
-    if (sortableInstance) {
-        try { sortableInstance.destroy(); } catch (e) { console.warn('Error destroying sortable instance:', e); }
-    }
-
-    if (propertyKeys.length > 0) {
-        sortableInstance = new Sortable(els.reorderList, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            dragClass: 'sortable-drag',
-            chosenClass: 'sortable-chosen',
-            onStart: (evt) => evt.item.setAttribute('aria-grabbed', 'true'),
-            onEnd: (evt) => {
-                evt.item.removeAttribute('aria-grabbed');
-                parent.postMessage({ pluginMessage: { type: 'order-updated-ui', order: getCurrentOrder() } }, '*');
-            },
-        });
-    }
 }
 
-/* ---------- Font Dropdown Logic ---------- */
+
+/* ---------- Font Dropdown Logic (Sin cambios) ---------- */
 function populateFonts() {
     const defaultFonts = {
-        'Arial': ['Regular', 'Bold', 'Italic', 'Bold Italic'],
-        'DM Sans': ['Regular', '500', '700', 'Italic', '500 Italic', '700 Italic'],
-        'Inter': ['Regular', '500', '700', '900', 'Italic', '500 Italic', '700 Italic', '900 Italic'],
-        'Lato': ['Regular', '700', '900', 'Italic', '700 Italic', '900 Italic'],
-        'Montserrat': ['Regular', 'Bold', 'Italic', 'Bold Italic'],
-        'Open Sans': ['Regular', 'Bold', 'Italic', 'Bold Italic'],
-        'Playfair Display': ['Regular', '700', '900', 'Italic', '700 Italic', '900 Italic'],
-        'Poppins': ['Regular', '500', '700', 'Italic', '500 Italic', '700 Italic'],
-        'Roboto': ['Regular', '500', '700', 'Italic', '500 Italic', '700 Italic'],
-        'Roboto Slab': ['Regular', '700', '900'],
-        'Space Mono': ['Regular', 'Bold', 'Italic', 'Bold Italic'],
-        'Times New Roman': ['Regular', 'Bold', 'Italic', 'Bold Italic']
+        'Arial': ['Regular', 'Bold', 'Italic', 'Bold Italic'], 'DM Sans': ['Regular', '500', '700', 'Italic', '500 Italic', '700 Italic'], 'Inter': ['Regular', '500', '700', '900', 'Italic', '500 Italic', '700 Italic', '900 Italic'], 'Lato': ['Regular', '700', '900', 'Italic', '700 Italic', '900 Italic'], 'Montserrat': ['Regular', 'Bold', 'Italic', 'Bold Italic'], 'Open Sans': ['Regular', 'Bold', 'Italic', 'Bold Italic'], 'Playfair Display': ['Regular', '700', '900', 'Italic', '700 Italic', '900 Italic'], 'Poppins': ['Regular', '500', '700', 'Italic', '500 Italic', '700 Italic'], 'Roboto': ['Regular', '500', '700', 'Italic', '500 Italic', '700 Italic'], 'Roboto Slab': ['Regular', '700', '900'], 'Space Mono': ['Regular', 'Bold', 'Italic', 'Bold Italic'], 'Times New Roman': ['Regular', 'Bold', 'Italic', 'Bold Italic']
     };
     allFontsByFamily = defaultFonts;
-
     const families = Object.keys(allFontsByFamily).sort();
     const currentFamily = appState.tagOptions.fontFamily;
     const defaultFamily = families.includes(currentFamily) ? currentFamily : (families.includes('Inter') ? 'Inter' : families[0] || 'Arial');
-    
     appState.tagOptions.fontFamily = defaultFamily;
     els.tagFontFamilyInput.value = defaultFamily;
-
     setupFontFilter('family', () => families, (family) => {
         appState.tagOptions.fontFamily = family;
         els.tagFontFamilyInput.value = family;
@@ -771,7 +816,6 @@ function populateFonts() {
         saveStateSnapshot();
         updatePreview();
     });
-
     populateFontStyles(defaultFamily);
 }
 
@@ -779,10 +823,8 @@ function populateFontStyles(familyName) {
     const styles = (allFontsByFamily[familyName] || ['Regular', 'Bold']);
     const currentStyle = appState.tagOptions.fontStyle;
     const defaultStyle = styles.includes(currentStyle) ? currentStyle : (styles.includes('Regular') ? 'Regular' : styles[0]);
-
     appState.tagOptions.fontStyle = defaultStyle;
     els.tagFontStyleInput.value = defaultStyle;
-
     setupFontFilter('style', () => styles, (style) => {
         appState.tagOptions.fontStyle = style;
         els.tagFontStyleInput.value = style;
@@ -795,16 +837,13 @@ function populateFontStyles(familyName) {
 function setupFontFilter(type, getItems, onSelect) {
     const inputEl = type === 'family' ? els.tagFontFamilyInput : els.tagFontStyleInput;
     const panelEl = type === 'family' ? els.tagFontFamilyPanel : els.tagFontStylePanel;
-
     const renderItems = () => {
         panelEl.innerHTML = '';
         const items = getItems();
-            
         items.forEach(item => {
             const button = document.createElement('button');
             button.className = 'dropdown-item';
             button.textContent = item;
-            
             if (type === 'family') {
                 button.style.fontFamily = `"${item}", var(--font-sans)`;
             } else if (type === 'style') {
@@ -817,12 +856,10 @@ function setupFontFilter(type, getItems, onSelect) {
                 if (lowerItem.includes('700') || lowerItem.includes('bold')) weight = '700';
                 button.style.fontWeight = weight;
             }
-
             button.onclick = () => onSelect(item);
             panelEl.appendChild(button);
         });
     };
-
     inputEl.onclick = () => {
         const isShowing = panelEl.classList.toggle('show');
         if (isShowing) {
@@ -833,19 +870,16 @@ function setupFontFilter(type, getItems, onSelect) {
             panelEl.classList.toggle('up', (viewportHeight - triggerRect.bottom) < panelHeight && triggerRect.top > panelHeight);
         }
     };
-    
     inputEl.onblur = () => setTimeout(() => {
         if (!panelEl.matches(':hover')) panelEl.classList.remove('show');
     }, 150);
 }
 
 function getCurrentOrder(){
-    return Array.from(els.reorderList.children)
-    .filter(n => n.classList.contains('reorder-item'))
-    .map(n => n.dataset.property);
+    return currentPropertyOrder;
 }
 
-/* ---------- Preview & Brace ---------- */
+/* ---------- Preview & Brace (Sin cambios) ---------- */
 const updatePreview = debounce(() => {
     const { tagOptions } = appState;
     [els.previewTag].forEach(tagEl => {
@@ -876,12 +910,10 @@ function updateBraceVisual(tagEl, braceEl, type) {
     const braceOn = els.braceEnabled.checked;
     braceEl.style.display = braceOn ? 'block' : 'none';
     if (!braceOn || tagEl.offsetWidth === 0) return;
-
     const { braceColor, braceWeight } = appState.tagOptions;
     const color = '#' + braceColor;
     const weight = Math.max(1, braceWeight);
     let svgHTML, style;
-
     if (type === 'side') {
         const h = tagEl.offsetHeight, w = 12;
         style = { top: '0px', left: `${tagEl.offsetWidth - 1}px`, height: `${h}px`, width: `${w}px` };
@@ -895,7 +927,7 @@ function updateBraceVisual(tagEl, braceEl, type) {
     braceEl.innerHTML = svgHTML;
 }
 
-/* ---------- Panels & Dropdowns ---------- */
+/* ---------- Panels & Dropdowns (Sin cambios en esta parte) ---------- */
 function initInspectorPanels() {
     $$('.switch-input[data-controls]').forEach(toggle => {
         const panel = document.getElementById(toggle.dataset.controls);
@@ -945,15 +977,13 @@ function initializeDropdowns() {
         const panel = dropdown.querySelector('.dropdown-panel');
         const hexInput = dropdown.querySelector('input.input');
         if (!trigger || !panel || !hexInput) return;
-
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
             const isShowing = panel.classList.toggle('show');
             if (isShowing) {
                 closeAllDropdowns(trigger);
-                // Dynamic alignment logic
                 const inputRect = dropdown.getBoundingClientRect();
-                if (inputRect.left + 280 > window.innerWidth) { // 280 is a safe estimate for the panel width
+                if (inputRect.left + 280 > window.innerWidth) {
                     panel.classList.add('align-right');
                 } else {
                     panel.classList.remove('align-right');
@@ -962,7 +992,6 @@ function initializeDropdowns() {
                  panel.classList.remove('align-right');
             }
         });
-        
         panel.addEventListener('click', (e) => {
             const target = e.target.closest('.color-palette__swatch');
             if (target) {
@@ -988,22 +1017,20 @@ window.onmessage = (event) => {
     if (msg.type === 'selection-changed') {
         const hasSel = !!msg.componentSetId;
         setSelectionState(hasSel);
-        if (!hasSel) { 
-            els.componentInput.value = 'Select a component to begin'; 
-            clearReorderList(); 
+        if (!hasSel) {
+            els.componentInput.value = 'Select a component to begin';
+            clearReorderList();
             return;
         }
         els.componentInput.value = msg.componentSetName || 'Component Set';
-        const { propertyKeys = [], properties = {}, propertyOrder } = msg;
+        const { propertyKeys = [], properties = {} } = msg;
 
-        const finalOrder = (propertyOrder && propertyOrder.length > 0) ? propertyOrder : propertyKeys;
-
-        if (finalOrder.length === 0) {
+        if (propertyKeys.length === 0) {
             clearReorderList();
             els.organizeBtn.disabled = true;
         } else {
-            ensureAllPropsHaveRoles(finalOrder);
-            renderProperties(finalOrder, properties);
+            ensureAllPropsHaveRoles(propertyKeys);
+            renderProperties(propertyKeys, properties);
         }
     }
 
@@ -1015,19 +1042,7 @@ window.onmessage = (event) => {
 function getTagOptionsForPlugin() {
     const { tagOptions } = appState;
     return {
-        enableFill: tagOptions.enableFill,
-        fillSource: { type: 'hex', value: '#' + tagOptions.fillColor },
-        enableStroke: tagOptions.enableStroke,
-        strokeSource: { type: 'hex', value: '#' + tagOptions.strokeColor },
-        strokeWeight: tagOptions.strokeWeight,
-        cornerRadius: tagOptions.cornerRadius,
-        textSize: tagOptions.textSize,
-        textSource: { type: 'hex', value: '#' + tagOptions.textColor },
-        braceEnabled: tagOptions.braceEnabled,
-        braceSource: { type: 'hex', value: '#' + tagOptions.braceColor },
-        braceWeight: tagOptions.braceWeight,
-        fontFamily: tagOptions.fontFamily,
-        fontStyle: tagOptions.fontStyle,
+        enableFill: tagOptions.enableFill, fillSource: { type: 'hex', value: '#' + tagOptions.fillColor }, enableStroke: tagOptions.enableStroke, strokeSource: { type: 'hex', value: '#' + tagOptions.strokeColor }, strokeWeight: tagOptions.strokeWeight, cornerRadius: tagOptions.cornerRadius, textSize: tagOptions.textSize, textSource: { type: 'hex', value: '#' + tagOptions.textColor }, braceEnabled: tagOptions.braceEnabled, braceSource: { type: 'hex', value: '#' + tagOptions.braceColor }, braceWeight: tagOptions.braceWeight, fontFamily: tagOptions.fontFamily, fontStyle: tagOptions.fontStyle,
     };
 }
 
@@ -1037,11 +1052,7 @@ function handleReset() {
     updateUIFromState(appState);
     saveStateSnapshot();
     parent.postMessage({
-        pluginMessage: {
-            type: 'save-settings',
-            spacing: appState.spacing,
-            tagOptions: appState.tagOptions
-        }
+        pluginMessage: { type: 'save-settings', spacing: appState.spacing, tagOptions: appState.tagOptions }
     }, '*');
 }
 
@@ -1060,16 +1071,13 @@ function bindStateToInputs() {
         const el = els[elId];
         if (!el) continue;
         const event = (el.type === 'checkbox') ? 'change' : 'input';
-
         el.addEventListener(event, debounce(() => {
             const [section, key] = stateKey.split('.');
             let value = el.type === 'checkbox' ? el.checked : (el.type === 'number' ? Number(el.value) : el.value.replace('#', '').toUpperCase());
-            
             if (appState[section][key] !== value) {
                 appState[section][key] = value;
                 saveStateSnapshot();
                 updatePreview();
-
                 if(elId.includes('Hex')) {
                     const swatch = el.closest('.input-group')?.querySelector('.color-swatch');
                     if(swatch) swatch.style.backgroundColor = '#' + value;
@@ -1081,20 +1089,16 @@ function bindStateToInputs() {
 
 function init(){
     parent.postMessage({ pluginMessage: { type: 'ui-loaded' } }, '*');
-    
     appState = getInitialState();
     populateFonts();
     updateUIFromState(appState);
     saveStateSnapshot();
-
     setSelectionState(false);
     clearReorderList();
-    
     bindStateToInputs();
     initInspectorPanels();
     initColorPickers();
     initializeDropdowns();
-
     els.organizeBtn.addEventListener('click', () => {
         if (!hasSelection || els.organizeBtn.classList.contains('is-loading')) return;
         setButtonLoading(els.organizeBtn, true);
@@ -1106,9 +1110,7 @@ function init(){
           roleMap: roleByProp
         }}, '*');
     });
-
     els.resetBtn.addEventListener('click', handleReset);
-
     const resizeObserver = new ResizeObserver(updateBraces);
     resizeObserver.observe(els.previewBoard);
     updatePreview();
@@ -1119,6 +1121,3 @@ init();
 </script>
 </body>
 </html>
-
-/* ping VSCode Thu Sep  4 12:44:42 -04 2025 */
-/* ping VSCode Thu Sep  4 12:44:46 -04 2025 */
