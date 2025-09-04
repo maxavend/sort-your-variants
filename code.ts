@@ -635,9 +635,8 @@ async function organizeVariantsCoreV2(
     const cgIdx = Math.max(0, colGroupValues.indexOf(cgVal));
     const rgIdx = Math.max(0, rowGroupIds.indexOf(rowGroupIdFor(p)));
 
-  // Place column-group blocks right-to-left: highest index at left? no, we want grouping from right to left
-  const revCgIdx = (colGroupValues.length > 0) ? (colGroupValues.length - 1 - cgIdx) : cgIdx;
-  const xBlock = padding + revCgIdx * (blockW + groupSpacing);
+  // Place column-group blocks left-to-right, preserving Figma property order
+  const xBlock = padding + cgIdx * (blockW + groupSpacing);
     const yBand  = padding + rgIdx * (blockH + groupSpacing);
 
     const cx = xBlock + colOffset[cIdx] + (colWidths[cIdx] - v.width) / 2;
@@ -666,9 +665,8 @@ async function organizeVariantsCoreV2(
     const colCentersInBlock: number[] = colValues.map((_, i) => colOffset[i] + colWidths[i] / 2);
 
     for (let gIdx = 0; gIdx < colGroupValues.length; gIdx++) {
-      // Place blocks right-to-left: map logical index to visual start X
-      const visualIdx = (colGroupValues.length > 0) ? (colGroupValues.length - 1 - gIdx) : gIdx;
-      const blockStartX = baseX + padding + visualIdx * (blockW + groupSpacing);
+      // Place blocks left-to-right to respect the defined order of property values
+      const blockStartX = baseX + padding + gIdx * (blockW + groupSpacing);
 
       // Create chips once per block so we can reuse them across passes
       const chips: FrameNode[] = [];
