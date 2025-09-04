@@ -77,6 +77,12 @@ function deriveValueOrder(variants: ComponentNode[], key: string, defined: strin
   const ordered: string[] = []; for (const d of defined) if (indexOfStr(present, d) !== -1) ordered.push(d); for (const p of present) if (indexOfStr(ordered, p) === -1) ordered.push(p); return ordered;
 }
 
+function isBooleanLiteral(val: string | undefined | null): boolean {
+  if (val === undefined || val === null) return false;
+  const l = String(val).trim().toLowerCase();
+  return l === 'true' || l === 'false';
+}
+
 function computeFallbackOrder(variantProps: VariantPropsMap): string[] {
   const keys = Object.keys(variantProps); if (keys.length === 0) return [];
   const tuples = keys.map(k => ({ k, len: variantProps[k]?.values.length || 0 }));
@@ -223,11 +229,65 @@ async function createChip(textSegments: { characters: string, bold: boolean }[],
 // ---------------- Core organizer ----------------
 async function organizeVariantsByOrder(componentSet: ComponentSetNode, propertyOrder: string[], spacing: SpacingPrefs, tag?: TagOptions): Promise<string | null> {
   const variants = componentSet.children.filter((n): n is ComponentNode => n.type === 'COMPONENT');
-  let variantProps: VariantPropsMap; try { variantProps = componentSet.variantGroupProperties as VariantPropsMap; } catch (e) { console.warn(e); return '⚠️ Variant conflict. Ensure properties/values are consistent.'; }
+  let variantProps: VariantPropsMap;
+  try {
+    variantProps = componentSet.variantGroupProperties as VariantPropsMap;
+  } catch (e) {
+    console.warn(e);
+    return '⚠️ Variant conflict. Ensure properties/values are consistent.';
+  }
   if (Object.keys(variantProps).length < 1) return '⚠️ Component Set needs at least one property';
+
   const orderedKeys = propertyOrder && propertyOrder.length > 0 ? propertyOrder : Object.keys(variantProps);
-  const columnProperty = orderedKeys[0]; const rowProperty = orderedKeys.length > 1 ? orderedKeys[1] : null; const groupKeys = orderedKeys.slice(2);
-  return await organizeVariantsCore(componentSet, rowProperty, columnProperty, groupKeys, spacing, variants, variantProps, tag);
+
+  // NEW BEHAVIOR
+  // 1º -> COLUMNS, 2º -> ROWS, 3º -> COLUMN GROUPS, 4º+ -> ROW GROUPS
+  if (orderedKeys.length >= 3) {
+    const colKey = orderedKeys[0];
+    const rowKey = orderedKeys[1];
+    const colGroupKey = orderedKeys[2];
+    const rowGroupKeys = orderedKeys.slice(3);
+    return await organizeVariantsCoreV2(
+      componentSet,
+      rowKey,
+      colKey,
+      colGroupKey,
+      rowGroupKeys,
+      spacing,
+      variants,
+      variantProps,
+      tag || undefined
+    );
+  }
+
+  // Fallbacks: preserve compatibility when there are < 3 propiedades
+  if (orderedKeys.length === 2) {
+    const colKey = orderedKeys[0];
+    const rowKey = orderedKeys[1];
+    return await organizeVariantsCore(
+      componentSet,
+      rowKey,
+      colKey,
+      [],
+      spacing,
+      variants,
+      variantProps,
+      tag
+    );
+  }
+
+  // Only one key → treat as columns with a single implicit row
+  const onlyKey = orderedKeys[0];
+  return await organizeVariantsCore(
+    componentSet,
+    null,
+    onlyKey,
+    [],
+    spacing,
+    variants,
+    variantProps,
+    tag
+  );
 }
 
 async function organizeVariantsCore(
@@ -406,7 +466,7 @@ async function organizeVariantsCore(
         }];
         braceVec.x = groupChipRight; braceVec.y = rowsTop;
         await applyStrokeFromSource(braceVec, tag.braceSource, Math.max(1, tag.strokeWeight), tag.braceEnabled);
-        try { (braceVec as { strokeCap: StrokeCap | typeof figma.mixed }).strokeCap = 'ROUND'; } catch (_){ void 0; }
+        try { (braceVec as { strokeCap: StrokeCap | typeof figma.mixed }).strokeCap = 'ROUND'; } catch (_) { /* noop: strokeCap may be unsupported */ }
 
         // Brace below, chip above without non-existent methods
         const braceGroup = figma.group([braceVec], parentContainer); braceGroup.name = 'brace';
@@ -490,3 +550,357 @@ figma.ui.onmessage = async (msg: unknown) => {
     return;
   }
 };
+
+// --- organizeVariantsCoreV2: supports column groups and row groups ---
+async function organizeVariantsCoreV2(
+  componentSet: ComponentSetNode,
+  rowKey: string,
+  colKey: string,
+  colGroupKey: string | null,
+  rowGroupKeys: string[],
+  spacing: SpacingPrefs,
+  variants: ComponentNode[],
+  variantProps: VariantPropsMap,
+  rawTag?: TagOptions
+): Promise<string | null> {
+  // Prepare
+  ensureSetFreePositioning(componentSet);
+  const tag: TagOptions | null = rawTag ? normalizeTagOptions(rawTag) : null;
+
+  const definedCols = variantProps[colKey]?.values || [];
+  const colValues = deriveValueOrder(variants, colKey, definedCols);
+
+  const definedRows = variantProps[rowKey]?.values || [];
+  const rowValues = deriveValueOrder(variants, rowKey, definedRows);
+
+  // Column groups (3º clave): if missing, single group
+  const colGroupValues: string[] = [];
+  if (colGroupKey) {
+    for (const v of variants) {
+      const p = v.variantProperties as Record<string,string> | null; if (!p) continue;
+      const g = p[colGroupKey] ?? '__noColGroup__';
+      if (colGroupValues.indexOf(g) === -1) colGroupValues.push(g);
+    }
+  } else {
+    colGroupValues.push('__noColGroup__');
+  }
+
+  // Row group ids (4º+): concatenated "Prop:Value" stable order
+  const rowGroupIds: string[] = [];
+  function rowGroupIdFor(p: Record<string,string> | null): string {
+    if (!rowGroupKeys.length) return '__noRowGroup__';
+    const segs: string[] = [];
+    for (const k of rowGroupKeys) segs.push(`${k}:${p?.[k] ?? '—'}`);
+    return segs.join(' | ');
+  }
+  for (const v of variants) {
+    const p = v.variantProperties as Record<string,string> | null;
+    const id = rowGroupIdFor(p);
+    if (rowGroupIds.indexOf(id) === -1) rowGroupIds.push(id);
+  }
+
+  // Measurements
+  const padding = Number(spacing.padding);
+  const gap = Number(spacing.gap);
+  const groupSpacing = Number(spacing.groups);
+
+  const colWidths: number[] = colValues.map(cv => {
+    let w = 0; for (const v of variants) { const p = v.variantProperties as Record<string,string> | null; if (p && p[colKey] === cv) w = Math.max(w, v.width); }
+    return w;
+  });
+  const rowHeights: number[] = rowValues.map(rv => {
+    let h = 0; for (const v of variants) { const p = v.variantProperties as Record<string,string> | null; if (p && p[rowKey] === rv) h = Math.max(h, v.height); }
+    return h;
+  });
+
+  const colOffset: number[] = []; { let acc = 0; for (let c=0;c<colValues.length;c++){ colOffset[c] = acc; acc += colWidths[c] + gap; } }
+  const blockW = Math.max(0, colWidths.reduce((a,b)=>a+b,0) + gap * Math.max(0,colValues.length-1));
+
+  const rowCenter: number[] = []; if (rowValues.length){ rowCenter[0]=rowHeights[0]/2; for (let r=1;r<rowValues.length;r++){ rowCenter[r]=rowCenter[r-1] + (rowHeights[r-1]/2) + gap + (rowHeights[r]/2); } }
+  const blockH = Math.max(0, rowHeights.reduce((a,b)=>a+b,0) + gap * Math.max(0,rowValues.length-1));
+
+  // Remove any previous tag group for this Component Set (replace, don't stack)
+  if (componentSet.parent) {
+    const parent = componentSet.parent as (BaseNode & ChildrenMixin);
+    const prev = parent.children.filter((n) => n.type === 'GROUP' && n.name === `${componentSet.name} tags`) as GroupNode[];
+    prev.forEach((g) => g.remove());
+  }
+
+  // Place each variant
+  for (const v of variants) {
+    const p = v.variantProperties as Record<string,string> | null; if (!p) continue;
+    const cIdx = Math.max(0, colValues.indexOf(p[colKey] ?? colValues[0]));
+    const rIdx = Math.max(0, rowValues.indexOf(p[rowKey] ?? rowValues[0]));
+    const cgVal = colGroupKey ? (p[colGroupKey] ?? '__noColGroup__') : '__noColGroup__';
+    const cgIdx = Math.max(0, colGroupValues.indexOf(cgVal));
+    const rgIdx = Math.max(0, rowGroupIds.indexOf(rowGroupIdFor(p)));
+
+  // Place column-group blocks right-to-left: highest index at left? no, we want grouping from right to left
+  const revCgIdx = (colGroupValues.length > 0) ? (colGroupValues.length - 1 - cgIdx) : cgIdx;
+  const xBlock = padding + revCgIdx * (blockW + groupSpacing);
+    const yBand  = padding + rgIdx * (blockH + groupSpacing);
+
+    const cx = xBlock + colOffset[cIdx] + (colWidths[cIdx] - v.width) / 2;
+    const cy = yBand  + rowCenter[rIdx] - v.height / 2;
+
+    v.x = cx; v.y = cy;
+  }
+
+  // Resize ComponentSet to fit all groups
+  const compW = padding*2 + (blockW * colGroupValues.length) + groupSpacing * Math.max(0, colGroupValues.length - 1);
+  const compH = padding*2 + (blockH * rowGroupIds.length) + groupSpacing * Math.max(0, rowGroupIds.length - 1);
+  componentSet.resizeWithoutConstraints(compW, compH);
+
+  // --- Tags (chips) ---
+  const parentContainer: BaseNode & ChildrenMixin = (componentSet.parent as (BaseNode & ChildrenMixin)) || (figma.currentPage as unknown as BaseNode & ChildrenMixin);
+  const baseX = componentSet.x; const baseY = componentSet.y;
+  const setRightX = baseX + compW;
+  const tagsNodes: SceneNode[] = [];
+
+  if (tag) {
+    const defaultFont = { family: tag.fontFamily || 'Inter', style: tag.fontStyle || 'Regular' };
+    const boldFont = { family: tag.fontFamily || 'Inter', style: 'Bold' };
+
+    // --- Column chips: per column-group block, with robust overlap detection & two-pass rotation ---
+    const baselineY = baseY - TAG_GAP; // bottom-aligned 48px above the component set
+    const colCentersInBlock: number[] = colValues.map((_, i) => colOffset[i] + colWidths[i] / 2);
+
+    for (let gIdx = 0; gIdx < colGroupValues.length; gIdx++) {
+      // Place blocks right-to-left: map logical index to visual start X
+      const visualIdx = (colGroupValues.length > 0) ? (colGroupValues.length - 1 - gIdx) : gIdx;
+      const blockStartX = baseX + padding + visualIdx * (blockW + groupSpacing);
+
+      // Create chips once per block so we can reuse them across passes
+      const chips: FrameNode[] = [];
+      const preW: number[] = []; const preH: number[] = [];
+      for (let c = 0; c < colValues.length; c++) {
+        const v = colValues[c];
+        const segs = isBooleanLiteral(v)
+          ? [ { characters: `${colKey}`, bold: true }, { characters: `: ${v}` , bold: false } ]
+          : [ { characters: v, bold: false } ];
+        const chip = await createChip(segs, tag, defaultFont, boldFont);
+        parentContainer.appendChild(chip);
+        chips.push(chip);
+        preW[c] = chip.width; preH[c] = chip.height;
+      }
+
+      // Helper: place chips with a rotation flag (no pushing to tags yet)
+      const layoutChips = (rotate: boolean): number => {
+        let maxTopChipHeight = 0;
+        for (let c = 0; c < chips.length; c++) {
+          const chip = chips[c];
+          const centerX = blockStartX + colCentersInBlock[c];
+          chip.rotation = rotate ? 90 : 0;
+          if (rotate) {
+            const w0 = preW[c], h0 = preH[c];
+            chip.x = centerX - (h0 / 2);
+            chip.y = baselineY - w0; // align bottom using pre-rotation width
+          } else {
+            chip.x = centerX - preW[c] / 2;
+            chip.y = baselineY - preH[c];
+          }
+          const rb = chip.absoluteRenderBounds;
+          if (rb) {
+            // center and bottom-align using rendered bounds
+            chip.x = centerX - (rb.width / 2);
+            const currentBottom = rb.y + rb.height;
+            chip.y += (baselineY - currentBottom);
+            maxTopChipHeight = Math.max(maxTopChipHeight, rb.height);
+          } else {
+            maxTopChipHeight = Math.max(maxTopChipHeight, chip.height);
+          }
+          // Clamp within this block using rendered width when available
+          const rb2 = chip.absoluteRenderBounds;
+          const effW = rb2 ? rb2.width : chip.width;
+          const minX = blockStartX; const maxX = blockStartX + blockW - effW;
+          chip.x = Math.max(minX, Math.min(maxX, chip.x));
+        }
+        return maxTopChipHeight;
+      };
+
+      // Pass 1: try without rotation, then check overlap with rendered bounds
+      let maxH = layoutChips(false);
+      let overlapped = false;
+      {
+        const MIN_CHIP_GAP = 8;
+        for (let c = 0; c < chips.length - 1; c++) {
+          const rbA = chips[c].absoluteRenderBounds; const rbB = chips[c+1].absoluteRenderBounds;
+          if (!rbA || !rbB) continue;
+          const centerA = rbA.x + rbA.width / 2; const centerB = rbB.x + rbB.width / 2;
+          const gapCenters = Math.abs(centerB - centerA);
+          const minRequired = (rbA.width / 2) + (rbB.width / 2) + MIN_CHIP_GAP;
+          if (gapCenters < minRequired) { overlapped = true; break; }
+        }
+      }
+      // If overlaps, rotate and re-layout; re-evaluate max height
+      if (overlapped) { maxH = layoutChips(true); }
+
+      // Final pass: ensure perfect centering using a fresh read of render bounds, then push to tags
+      for (let c = 0; c < chips.length; c++) {
+        const chip = chips[c];
+        const centerX = blockStartX + colCentersInBlock[c];
+        const rb = chip.absoluteRenderBounds;
+        if (rb) {
+          chip.x = centerX - (rb.width / 2);
+          const currentBottom = rb.y + rb.height;
+          chip.y += (baselineY - currentBottom);
+          // Re-clamp with rendered width
+          const minX = blockStartX; const maxX = blockStartX + blockW - rb.width;
+          chip.x = Math.max(minX, Math.min(maxX, chip.x));
+        }
+        tagsNodes.push(chip);
+      }
+
+      // Column-group chip (top): place CHIP 48px above tallest top chip, brace directly below (0px gap)
+      if (colGroupKey && colGroupValues[gIdx] !== '__noColGroup__') {
+        const segs: { characters: string, bold: boolean }[] = [
+          { characters: `${colGroupKey}`, bold: true },
+          { characters: `: ${colGroupValues[gIdx]}`, bold: false },
+        ];
+        const cgChip = await createChip(segs, tag, defaultFont, boldFont);
+
+        const topOfTopChipsY = baselineY - maxH; // top of tallest chip AFTER any rotation
+        const targetChipBottom = topOfTopChipsY - 48; // chip-to-chip spacing = 48px
+
+        const centerX = blockStartX + blockW / 2;
+        cgChip.x = centerX - cgChip.width / 2;
+        // Place cgChip so its bottom hits targetChipBottom using render bounds
+        const rb0 = cgChip.absoluteRenderBounds;
+        if (rb0) {
+          const dy = targetChipBottom - (rb0.y + rb0.height);
+          cgChip.y = (cgChip.y || 0) + dy;
+          // re-center using rendered width
+          const dx = centerX - (rb0.x + rb0.width / 2);
+          cgChip.x = (cgChip.x || 0) + dx;
+        } else {
+          cgChip.y = targetChipBottom - cgChip.height;
+        }
+
+        // Brace immediately below the chip (0px internal)
+        const brace = figma.createVector();
+        brace.vectorPaths = [{ windingRule: 'NONE', data: `M 0 ${CONNECTOR} L ${blockW} ${CONNECTOR} M ${blockW/2} 0 L ${blockW/2} ${CONNECTOR}` }];
+        await applyStrokeFromSource(brace, tag.braceSource, Math.max(1, tag.strokeWeight), tag.braceEnabled);
+        try { (brace as { strokeCap: StrokeCap | typeof figma.mixed }).strokeCap = 'ROUND'; } catch (_) { /* noop */ }
+        const rb1 = cgChip.absoluteRenderBounds;
+        const chipBottom = rb1 ? (rb1.y + rb1.height) : (cgChip.y + cgChip.height);
+        brace.x = centerX - (blockW / 2);
+        brace.y = chipBottom; // touching
+
+        const grouped = figma.group([brace, cgChip], parentContainer); grouped.name = 'col-group-chip';
+        // Ensure brace is behind chip inside the group
+        grouped.insertChild(0, brace); // send brace to back within group
+        grouped.appendChild(cgChip);   // bring chip to front within group
+        tagsNodes.push(grouped);
+      }
+    }
+
+    // --- Row chips por banda + título de grupo de filas (brace) ---
+    for (let rg = 0; rg < rowGroupIds.length; rg++) {
+      const yBand = padding + rg * (blockH + groupSpacing);
+
+      // Chips de fila (una vez por banda, a la IZQUIERDA del set) — alineados a 48px del borde izquierdo
+      let rowsTop = Infinity, rowsBottom = -Infinity;
+      let minRowChipLeft = Infinity;
+      const targetRight = baseX - TAG_GAP; // borde derecho renderizado de cada chip
+      for (let r = 0; r < rowValues.length; r++) {
+        const v = rowValues[r];
+        const segs = isBooleanLiteral(v)
+          ? [ { characters: `${rowKey}`, bold: true }, { characters: `: ${v}`, bold: false } ]
+          : [ { characters: v, bold: false } ];
+        const chip = await createChip(segs, tag, defaultFont, boldFont);
+        const targetCenterY = baseY + yBand + rowCenter[r];
+
+        // Posición tentativa a la izquierda (aprox), luego corregimos por bounds
+        chip.x = targetRight - chip.width;
+        chip.y = targetCenterY - chip.height / 2;
+        parentContainer.appendChild(chip);
+
+        const rb = chip.absoluteRenderBounds;
+        if (rb) {
+          // Ajustar para que el borde derecho RENDERIZADO sea exactamente baseX - TAG_GAP
+          const currentRight = rb.x + rb.width;
+          chip.x += (targetRight - currentRight);
+          // Centrar verticalmente con altura renderizada
+          const currentCenterY = rb.y + rb.height / 2;
+          chip.y += (targetCenterY - currentCenterY);
+          // Extremos para brace
+          const newTop = chip.absoluteRenderBounds ? chip.absoluteRenderBounds.y : chip.y;
+          const newBottom = chip.absoluteRenderBounds ? (chip.absoluteRenderBounds.y + chip.absoluteRenderBounds.height) : (chip.y + chip.height);
+          if (newTop < rowsTop) rowsTop = newTop;
+          if (newBottom > rowsBottom) rowsBottom = newBottom;
+          // Capture minimum left edge from render bounds
+          const left = rb.x;
+          if (left < minRowChipLeft) minRowChipLeft = left;
+        } else {
+          if (chip.y < rowsTop) rowsTop = chip.y;
+          if (chip.y + chip.height > rowsBottom) rowsBottom = chip.y + chip.height;
+          if (chip.x < minRowChipLeft) minRowChipLeft = chip.x;
+        }
+        tagsNodes.push(chip);
+      }
+      if (!isFinite(rowsTop) || !isFinite(rowsBottom)) { rowsTop = baseY + yBand; rowsBottom = baseY + yBand + blockH; }
+      if (!isFinite(minRowChipLeft)) { minRowChipLeft = baseX - TAG_GAP; }
+      const rowsHeight = Math.max(0, rowsBottom - rowsTop);
+      const rowsCenterY = rowsTop + rowsHeight / 2;
+
+      // Chip combinado de grupo de filas con brace (si hay 4º+ claves) — 48px MÁS a la izquierda que los row chips
+      if (rowGroupKeys.length) {
+        const obj: Record<string,string> = {};
+        const firstMatch = variants.find((v) => {
+          const vp = (v.variantProperties as Record<string, string> | null) || null;
+          return rowGroupIdFor(vp) === rowGroupIds[rg];
+        });
+        const p = (firstMatch?.variantProperties || {}) as Record<string,string>;
+        for (const k of rowGroupKeys) obj[k] = p[k] ?? '—';
+
+        const textSegments: { characters: string, bold: boolean }[] = [];
+        const keys = Object.keys(obj);
+        keys.forEach((k, index) => {
+          textSegments.push({ characters: k, bold: true });
+          textSegments.push({ characters: `: ${obj[k]}`, bold: false });
+          if (index < keys.length - 1) textSegments.push({ characters: ', ', bold: false });
+        });
+
+        const titleChip = await createChip(textSegments, tag, defaultFont, boldFont);
+
+        // El brace debe estar a 48px a la IZQUIERDA del CHIP DE ROW más ancho (referencia = borde IZQUIERDO mínimo)
+        const braceRightX = (minRowChipLeft) - GROUP_CHIP_GAP; // 48px a la izquierda del left más extremo
+
+        // Posicionar el chip con su borde derecho renderizado pegado al **derecho** del brace (0px interno)
+        titleChip.x = braceRightX - titleChip.width; // aproximación
+        titleChip.y = rowsCenterY - titleChip.height / 2;
+        parentContainer.appendChild(titleChip);
+        const trb = titleChip.absoluteRenderBounds;
+        if (trb) {
+          const tright = trb.x + trb.width;
+          titleChip.x += (braceRightX - tright);
+          const tcy = trb.y + trb.height / 2;
+          titleChip.y += (rowsCenterY - tcy);
+        }
+
+        // Brace vertical con la **punta** apuntando hacia la IZQUIERDA (hacia el chip) — 180° respecto a la otra orientación
+        const braceVec = figma.createVector();
+        // Vertical en x=0 y tick de -CONNECTOR → 0 (apunta a la izquierda)
+        braceVec.vectorPaths = [{ windingRule: 'NONE', data: `M 0 0 L 0 ${rowsHeight} M -${CONNECTOR} ${rowsHeight/2} L 0 ${rowsHeight/2}` }];
+        // Colocar la línea vertical exactamente en braceRightX (0px de separación con el chip por su borde derecho)
+        braceVec.x = braceRightX; braceVec.y = rowsTop;
+        await applyStrokeFromSource(braceVec, tag.braceSource, Math.max(1, tag.strokeWeight), tag.braceEnabled);
+        try { (braceVec as { strokeCap: StrokeCap | typeof figma.mixed }).strokeCap = 'ROUND'; } catch (_) { /* noop */ }
+
+        const groupChip = figma.group([braceVec, titleChip], parentContainer); groupChip.name = 'row-group-chip';
+        // Ensure brace is behind chip inside the group
+        groupChip.insertChild(0, braceVec); // send brace to back within group
+        groupChip.appendChild(titleChip);   // bring chip to front within group
+        tagsNodes.push(groupChip);
+      }
+    }
+  }
+
+  if (tagsNodes.length > 0) {
+    const groupParent: BaseNode & ChildrenMixin = (componentSet.parent as (BaseNode & ChildrenMixin)) || (figma.currentPage as unknown as BaseNode & ChildrenMixin);
+    const tagGroup = figma.group(tagsNodes, groupParent);
+    tagGroup.name = `${componentSet.name} tags`;
+  }
+
+  return null;
+}

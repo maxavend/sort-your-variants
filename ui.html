@@ -134,8 +134,17 @@ padding: 0 12px; height: 32px; line-height: 1; position: relative; }
 .sortable-chosen { cursor: grabbing !important; }
 .sortable-drag { transform: rotate(5deg); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); }
 .drag-handle { color: var(--text-muted); flex-shrink: 0; display: inline-flex; align-items: center; padding: 4px; border-radius: var(--radius); user-select: none; }
-.reorder-title { font-weight: 600; color: var(--text); font-size: 14px; }
-.reorder-values { font-size: 12px; color: var(--text-muted); }
+    .reorder-title { font-weight: 600; color: var(--text); font-size: 14px; }
+    .reorder-values { font-size: 12px; color: var(--text-muted); }
+    /* left column inside item (title + values) */
+    .reorder-item .meta-left { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-width: 0; }
+    /* top row inside item: title at left, role at right (auto-layout-like) */
+    .reorder-item .meta-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .reorder-title { font-weight: 600; color: var(--text); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* role label placed on the same top row, right aligned */
+    .reorder-item .item-role { font-size: 12px; color: var(--text-muted); text-align: right; white-space: nowrap; flex-shrink: 0; margin-left: 12px; }
+    /* values row spans full width beneath and truncates to one line */
+    .reorder-values { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
 .info-notification { background-color: var(--editor-bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; line-height: 1.6; color: var(--text-muted); }
 .info-notification p { margin: 0; font-size: 12px; }
 .info-notification strong { color: var(--text); font-weight: 600; display: block; margin-bottom: 2px; font-size: 14px; }
@@ -267,7 +276,7 @@ img, svg {
 <!-- JS populates items -->
 </div>
 <div class="info-notification">
-<p><strong>Layout Organization</strong>The first property will be columns, the second will be rows, and the rest will be groups.</p>
+  <p><strong>Layout Organization</strong> The first property defines rows, the second defines columns, the third creates column groups, and the rest create row groups.</p>
 </div>
 </div>
 </section>
@@ -583,7 +592,7 @@ function renderProperties(propertyKeys, properties){
         notification.classList.add('with-divider');
     }
 
-    propertyKeys.forEach((key) => {
+    propertyKeys.forEach((key, idx) => {
         const cleanKey = key.replace(/^State=/, '');
         const values = (properties?.[key]?.values || []).map(val => val.replace(/^State=/, '')).join(', ');
         const item = document.createElement('div');
@@ -591,14 +600,18 @@ function renderProperties(propertyKeys, properties){
         item.dataset.property = key;
         item.setAttribute('role','listitem');
         item.setAttribute('aria-label', `Property ${cleanKey}`);
-        item.innerHTML = `
+        const roleText = (idx === 0) ? 'Column' : (idx === 1) ? 'Row' : (idx === 2) ? 'Col Group' : 'Row Group';
+    item.innerHTML = `
             <div class="drag-handle" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M5 3C5.55228 3 6 3.44772 6 4C6 4.55228 5.55228 5 5 5C4.44772 5 4 4.55228 4 4C4 3.44772 4.44772 3 5 3ZM5 7C5.55228 7 6 7.44772 6 8C6 8.55228 5.55228 9 5 9C4.44772 9 4 8.55228 4 8C4 7.44772 4.44772 7 5 7ZM6 12C6 11.4477 5.55228 11 5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13C5.55228 13 6 12.5523 6 12ZM11 3C11.5523 3 12 3.44772 12 4C12 4.55228 11.5523 5 11 5C10.4477 5 10 4.55228 10 4C10 3.44772 10.4477 3 11 3ZM11 7C11.5523 7 12 7.44772 12 8C12 8.55228 11.5523 9 11 9C10.4477 9 10 8.55228 10 8C10 7.44772 10.4477 7 11 7ZM12 12C12 11.4477 11.5523 11 11 11C10.4477 11 10 11.4477 10 12C10 12.5523 10.4477 13 11 13C11.5523 13 12 12.5523 12 12Z"></path>
                 </svg>
             </div>
-            <div style="display:grid;gap:2px; flex-grow: 1;">
-                <div class="reorder-title">${cleanKey}</div>
+            <div class="meta-left">
+                <div class="meta-top">
+                    <div class="reorder-title">${cleanKey}</div>
+                    <div class="item-role">${roleText}</div>
+                </div>
                 <div class="reorder-values">${values}</div>
             </div>
         `;
@@ -609,6 +622,17 @@ function renderProperties(propertyKeys, properties){
         try { sortableInstance.destroy(); } catch (e) { console.warn('Error destroying sortable instance:', e); }
     }
     
+    // helper: update role labels based on current DOM order
+    function updateRoleLabels() {
+        const items = Array.from(els.reorderList.children).filter(n => n.classList && n.classList.contains('reorder-item'));
+        items.forEach((el, i) => {
+            const roleEl = el.querySelector('.item-role');
+            if (!roleEl) return;
+            const txt = (i === 0) ? 'Column' : (i === 1) ? 'Row' : (i === 2) ? 'Col Group' : 'Row Group';
+            roleEl.textContent = txt;
+        });
+    }
+
     if (propertyKeys.length > 0) {
         sortableInstance = new Sortable(els.reorderList, {
             animation: 150,
@@ -618,10 +642,14 @@ function renderProperties(propertyKeys, properties){
             onStart: (evt) => evt.item.setAttribute('aria-grabbed', 'true'),
             onEnd: (evt) => {
                 evt.item.removeAttribute('aria-grabbed');
+                // update role labels immediately in UI
+                updateRoleLabels();
                 parent.postMessage({ pluginMessage: { type: 'order-updated-ui', order: getCurrentOrder() } }, '*');
             },
         });
     }
+    // ensure labels are correct after initial render
+    updateRoleLabels();
 }
 
 /* ---------- Font Dropdown Logic ---------- */
