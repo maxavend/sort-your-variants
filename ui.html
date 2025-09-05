@@ -141,8 +141,8 @@ padding: 0 16px; height: 32px; line-height: 1; position: relative; }
 }
 .reorder-item:hover { border-color: var(--border); }
 
-/* Evita que un texto largo expanda el ancho del item o del plugin. El item no recortará el contenido
-   para que elementos flotantes (dropdowns) no queden ocultos; solo el texto interno se truncará. */
+/* Evita que un texto largo expanda o ancho do item o do plugin. O item não recortará o conteúdo
+   para que elementos flutuantes (dropdowns) não fiquem ocultos; apenas o texto interno será truncado. */
 .reorder-item {
     min-width: 0;
 }
@@ -153,8 +153,8 @@ padding: 0 16px; height: 32px; line-height: 1; position: relative; }
     flex-direction: column;
     gap: 6px;
     flex-grow: 1;
-    min-width: 0; /* Evita que el texto empuje al select */
-    overflow: hidden; /* Trunca contenido que sobrepase el ancho disponible */
+    min-width: 0; /* Evita que o texto empurre o select */
+    overflow: hidden; /* Trunca conteúdo que ultrapasse a largura disponível */
 }
 .reorder-title {
     font-weight: 600;
@@ -592,6 +592,9 @@ let roleByProp = {}; // { [propName]: 'column'|'row'|'column-group'|'row-group' 
 const UNIQUE_ROLES = ['column', 'row'];
 let currentPropertyOrder = [];
 
+// Stored config received from plugin (persisted between sessions)
+let storedHostConfig = null;
+
 /** ---- NUEVO: Orden predeterminado actualizado ---- */
 function computeDefaultRoles(keys) {
   const map = {};
@@ -845,6 +848,7 @@ function populateFonts() {
         closeAllDropdowns();
         saveStateSnapshot();
         updatePreview();
+        debounceSaveToHost();
     });
     populateFontStyles(defaultFamily);
 }
@@ -861,6 +865,7 @@ function populateFontStyles(familyName) {
         closeAllDropdowns();
         saveStateSnapshot();
         updatePreview();
+        debounceSaveToHost();
     });
 }
 
@@ -1043,6 +1048,26 @@ function initializeDropdowns() {
 window.onmessage = (event) => {
     const msg = event?.data?.pluginMessage; if (!msg) return;
 
+    // Persisted config from plugin backend (figma.clientStorage)
+    if (msg.type === 'stored-config') {
+        try {
+            storedHostConfig = msg.config || null;
+            // If spacing/tagOptions came from host, merge into appState
+            if (!appState) appState = getInitialState();
+            if (storedHostConfig?.spacing) {
+                appState.spacing = Object.assign({}, appState.spacing || {}, storedHostConfig.spacing);
+            }
+            if (storedHostConfig?.tagOptions) {
+                appState.tagOptions = Object.assign({}, appState.tagOptions || {}, storedHostConfig.tagOptions);
+            }
+            updateUIFromState(appState);
+            saveStateSnapshot();
+        } catch (e) {
+            console.warn('Failed to apply stored config in UI:', e);
+        }
+        return;
+    }
+
     if (msg.type === 'init-settings') {
         if (msg.spacing) appState.spacing = msg.spacing;
         if (msg.tagOptions) appState.tagOptions = msg.tagOptions;
@@ -1065,6 +1090,17 @@ window.onmessage = (event) => {
             clearReorderList();
             els.organizeBtn.disabled = true;
         } else {
+            // If the host provided a stored roleMap, apply only entries that exist in this selection
+            if (storedHostConfig && storedHostConfig.roleMap) {
+                const candidate = storedHostConfig.roleMap;
+                // Build a new roleByProp keeping existing rules but prioritizing stored ones for matching keys
+                const newMap = {};
+                propertyKeys.forEach(k => {
+                    if (candidate[k]) newMap[k] = candidate[k];
+                });
+                // Merge into current roleByProp without removing keys (ensureAllPropsHaveRoles will fill gaps)
+                roleByProp = Object.assign({}, roleByProp, newMap);
+            }
             ensureAllPropsHaveRoles(propertyKeys);
             renderProperties(propertyKeys, properties);
         }
@@ -1118,6 +1154,7 @@ function bindStateToInputs() {
                     const swatch = el.closest('.input-group')?.querySelector('.color-swatch');
                     if(swatch) swatch.style.backgroundColor = '#' + value;
                 }
+                debounceSaveToHost();
             }
         }));
     }

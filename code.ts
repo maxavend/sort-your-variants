@@ -1,6 +1,6 @@
 // code.ts — Sort your variants (patched)
 // Changes in this revision:
-// 1. Logic completely refactored to use a role map ('roleMap') instead of drag-and-drop order.
+// 1. Logic completely refactored to use a role map ('roleMap') instead of drag-and-drop.
 // 2. A new 'organizeByRoles' function serves as the main entry point for layout logic.
 // 3. Added validation to ensure 'Column' and 'Row' roles are always assigned (exactly one each).
 // 4. Columns Group now supports MULTIPLE properties (composed id; stable ordering).
@@ -155,7 +155,7 @@ function normalizeRole(v?: string): 'column' | 'row' | 'column-group' | 'row-gro
   if (!v) return '';
   const s = v.trim().toLowerCase().replace(/[_\s]+/g, '-'); // "Col Group" -> "col-group"
   if (s === 'column' || s === 'col') return 'column';
-  if (s === 'row') return 'row';
+  if (s === 'row' ) return 'row';
   if (s === 'group-col' || s === 'column-group' || s === 'groupcol') return 'column-group';
   if (s === 'row-group' || s === 'grouprow') return 'row-group';
   return '';
@@ -237,9 +237,29 @@ async function createChip(textSegments: { characters: string, bold: boolean }[],
   await applyTextColor(textNode, tag.textSource);
 
   for (const segment of textSegments) {
-    const fontToUse = segment.bold ? boldFont : defaultFont;
-    await figma.loadFontAsync(fontToUse);
-    textNode.setRangeFontName(currentPos, currentPos + segment.characters.length, fontToUse);
+    // Determine font to load (requested or fallback)
+    let fontToUse = segment.bold ? boldFont : defaultFont;
+    // Try loading the requested font, if fails, fallback to Inter Regular/Bold
+    try {
+      await figma.loadFontAsync(fontToUse);
+    } catch (e) {
+      const fallback = segment.bold ? { family: 'Inter', style: 'Bold' } : { family: 'Inter', style: 'Regular' };
+      try {
+        await figma.loadFontAsync(fallback);
+        fontToUse = fallback;
+      } catch (e2) {
+        console.warn('Failed to load both requested and fallback fonts for tag text:', fontToUse, e, e2);
+        // Skip setting font for this range but advance position
+        currentPos += segment.characters.length;
+        continue;
+      }
+    }
+
+    try {
+      textNode.setRangeFontName(currentPos, currentPos + segment.characters.length, fontToUse);
+    } catch (e) {
+      console.warn('Failed to setRangeFontName for tag text range:', e);
+    }
     currentPos += segment.characters.length;
   }
 
@@ -309,6 +329,29 @@ figma.ui.onmessage = async (msg: unknown) => {
       console.warn('Failed to load stored config:', e);
     }
     setTimeout(snapshotSelection, 50);
+    return;
+  }
+
+  if (m.type === 'save-settings') {
+    try {
+      const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
+      const toStore = { spacing: payload.spacing || DEFAULT_SPACING, tagOptions: payload.tagOptions || DEFAULT_TAG_OPTIONS };
+      await figma.clientStorage.setAsync('syv_last_config', toStore);
+    } catch (e) {
+      console.warn('Failed to save settings to clientStorage:', e);
+    }
+    // Also attempt to write into the currently selected Component Set pluginData so settings are tied to that set
+    try {
+      const sel = figma.currentPage.selection;
+      if (sel.length === 1 && isComponentSet(sel[0])) {
+        const cs = sel[0] as ComponentSetNode;
+        const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
+        if (payload.spacing) cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(payload.spacing));
+        if (payload.tagOptions) cs.setPluginData(PLUGIN_KEYS.tag, JSON.stringify(payload.tagOptions));
+      }
+    } catch (e) {
+      console.warn('Failed to write pluginData on ComponentSet:', e);
+    }
     return;
   }
 
@@ -462,7 +505,7 @@ async function organizeVariantsCoreV3(
       return cartesian(next, tail);
     };
 
-    const combos = cartesian([[]], colGroupKeys).map(parts => parts.join(' | '));
+    const combos = cartesian([[]], colGroupKeys).map(parts => parts.join(''));
     colGroupIds = combos.filter(id => colGroupIdsSet.has(id));
   }
 
@@ -545,6 +588,12 @@ async function organizeVariantsCoreV3(
   const tagsNodes: SceneNode[] = [];
 
   if (tag) {
+    // Defensive logging to help debug missing tag generation
+    try {
+      if (!tag.fillSource || !tag.textSource) {
+        console.warn('Tag options missing expected color sources:', tag);
+      }
+    } catch (e) { console.warn('Error inspecting tag options:', e); }
     const defaultFont = { family: tag.fontFamily || 'Inter', style: tag.fontStyle || 'Regular' };
     const boldFont = { family: tag.fontFamily || 'Inter', style: 'Bold' };
 
