@@ -297,7 +297,20 @@ async function organizeByRoles(
 // ---------------- Message handlers ----------------
 figma.ui.onmessage = async (msg: unknown) => {
   const m = msg as { type: string; [k: string]: unknown };
-  if (m.type === 'ui-loaded') { await sendFontsToUI(); setTimeout(snapshotSelection, 50); return; }
+  if (m.type === 'ui-loaded') {
+    await sendFontsToUI();
+    // Try to restore last saved configuration (roleMap, spacing, tagOptions)
+    try {
+      const stored = await figma.clientStorage.getAsync('syv_last_config') as { roleMap?: Record<string,string>; spacing?: Partial<SpacingPrefs>; tagOptions?: unknown } | null;
+      if (stored) {
+        figma.ui.postMessage({ type: 'stored-config', config: stored });
+      }
+    } catch (e) {
+      console.warn('Failed to load stored config:', e);
+    }
+    setTimeout(snapshotSelection, 50);
+    return;
+  }
 
   // ELIMINADO: El mensaje 'order-updated-ui' es obsoleto.
   
@@ -322,12 +335,19 @@ figma.ui.onmessage = async (msg: unknown) => {
     }
 
     const spacing: SpacingPrefs = { ...DEFAULT_SPACING, ...(payload.spacing || {}) } as SpacingPrefs;
-    cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(spacing));
+  cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(spacing));
     // ELIMINADO: ya no se guarda el orden.
     
     const currentPrefs = getPreferences(cs);
     if (payload.tagOptions) {
       cs.setPluginData(PLUGIN_KEYS.tag, JSON.stringify(normalizeTagOptions(payload.tagOptions)));
+    }
+
+    // Persist last-used configuration locally so it can be restored when the UI reopens
+    try {
+      await figma.clientStorage.setAsync('syv_last_config', { roleMap: payload.roleMap, spacing, tagOptions: payload.tagOptions ?? currentPrefs.tagOptions });
+    } catch (e) {
+      console.warn('Failed to save last config:', e);
     }
 
     const normTag = normalizeTagOptions(payload.tagOptions ?? currentPrefs.tagOptions);
