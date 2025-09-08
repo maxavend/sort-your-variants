@@ -298,7 +298,30 @@ async function organizeByRoles(
   const colGroupKeys = Object.keys(roleMap).filter(k => roleMap[k] === 'column-group');
   const rowGroupKeys = Object.keys(roleMap).filter(k => roleMap[k] === 'row-group');
 
-  // Validación: Debe existir exactamente 1 Column y 1 Row
+  // Ajuste: Si el Component Set solo tiene UNA propiedad, permitir que el usuario la
+  // asigne como Column o como Row y crear un eje sintético para la otra dimensión
+  // de forma que la organización pueda ejecutarse (ej. 1 fila x N columnas).
+  const propCount = Object.keys(variantProps || {}).length;
+  const SYN_ROW = '__syv_synthetic_row__';
+  const SYN_COL = '__syv_synthetic_col__';
+
+  if (propCount === 1) {
+    // Si el usuario asignó la única propiedad como columna pero no hay row,
+    // añadimos una fila sintética con un único valor.
+    if (colKeys.length === 1 && rowKeys.length === 0) {
+      rowKeys.push(SYN_ROW);
+      // Añadir entry mínima para que organizeVariantsCoreV3 pueda derivar valores.
+  variantProps[SYN_ROW] = { values: ['—'] };
+    }
+    // Si el usuario asignó la única propiedad como fila pero no hay column,
+    // añadimos una columna sintética con un único valor.
+    else if (rowKeys.length === 1 && colKeys.length === 0) {
+      colKeys.push(SYN_COL);
+  variantProps[SYN_COL] = { values: ['—'] };
+    }
+  }
+
+  // Validación final: Debe existir exactamente 1 Column y 1 Row (incluyendo sintéticos)
   if (colKeys.length !== 1) return '⚠️ Debe haber exactamente 1 "Column" asignado.';
   if (rowKeys.length !== 1) return '⚠️ Debe haber exactamente 1 "Row" asignado.';
 
