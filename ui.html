@@ -1058,7 +1058,17 @@ window.onmessage = (event) => {
                 appState.spacing = Object.assign({}, appState.spacing || {}, storedHostConfig.spacing);
             }
             if (storedHostConfig?.tagOptions) {
-                appState.tagOptions = Object.assign({}, appState.tagOptions || {}, storedHostConfig.tagOptions);
+                // Convert possible ColorSource objects into flat hex strings expected by UI
+                const incoming = storedHostConfig.tagOptions;
+                const normalizedForUI = Object.assign({}, incoming);
+                try {
+                    if (incoming.fillSource && typeof incoming.fillSource === 'object') normalizedForUI.fillColor = (incoming.fillSource.value || '').replace('#','').toUpperCase();
+                    if (incoming.strokeSource && typeof incoming.strokeSource === 'object') normalizedForUI.strokeColor = (incoming.strokeSource.value || '').replace('#','').toUpperCase();
+                    if (incoming.textSource && typeof incoming.textSource === 'object') normalizedForUI.textColor = (incoming.textSource.value || '').replace('#','').toUpperCase();
+                    if (incoming.braceSource && typeof incoming.braceSource === 'object') normalizedForUI.braceColor = (incoming.braceSource.value || '').replace('#','').toUpperCase();
+                } catch (e) { /* ignore */ }
+                // Merge normalized flat fields into appState.tagOptions
+                appState.tagOptions = Object.assign({}, appState.tagOptions || {}, normalizedForUI);
             }
             updateUIFromState(appState);
             saveStateSnapshot();

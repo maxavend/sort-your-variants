@@ -120,18 +120,24 @@ function normalizeTagOptions(raw: unknown): TagOptions {
   if (!raw || typeof raw !== 'object') return base;
 
   const r = raw as Record<string, unknown>;
+  // Accept many possible field names for colors coming from UI or pluginData
+  const fillVal = r.fillSource ?? r.fillHex ?? r.fillColor ?? r.fill;
+  const strokeVal = r.strokeSource ?? r.strokeHex ?? r.strokeColor ?? r.stroke;
+  const textVal = r.textSource ?? r.textColor ?? r.textHex ?? r.text;
+  const braceVal = r.braceSource ?? r.braceStrokeHex ?? r.braceColor ?? r.brace;
+
   return {
     enableFill: r.enableFill === undefined ? base.enableFill : Boolean(r.enableFill),
-    fillSource: normalizeColorSource(r.fillSource ?? r.fillHex, base.fillSource.value),
+    fillSource: normalizeColorSource(fillVal ?? base.fillSource.value, base.fillSource.value),
     enableStroke: r.enableStroke === undefined ? base.enableStroke : Boolean(r.enableStroke),
-    strokeSource: normalizeColorSource(r.strokeSource ?? r.strokeHex, base.strokeSource.value),
+    strokeSource: normalizeColorSource(strokeVal ?? base.strokeSource.value, base.strokeSource.value),
     strokeWeight: Number(r.strokeWeight ?? base.strokeWeight),
     cornerRadius: Number(r.cornerRadius ?? base.cornerRadius),
     textSize: Number(r.textSize ?? base.textSize),
-    textSource: normalizeColorSource(r.textSource ?? r.textColor, base.textSource.value),
+    textSource: normalizeColorSource(textVal ?? base.textSource.value, base.textSource.value),
     braceEnabled: r.braceEnabled === undefined ? base.braceEnabled : (r.braceEnabled !== false),
     braceSide: (r.braceSide as 'left' | 'right' | 'auto') ?? base.braceSide,
-    braceSource: normalizeColorSource(r.braceSource ?? r.braceStrokeHex, base.braceSource.value),
+    braceSource: normalizeColorSource(braceVal ?? base.braceSource.value, base.braceSource.value),
     fontFamily: (r.fontFamily as string) || base.fontFamily,
     fontStyle: (r.fontStyle as string) || base.fontStyle,
   };
@@ -334,9 +340,11 @@ figma.ui.onmessage = async (msg: unknown) => {
 
   if (m.type === 'save-settings') {
     try {
-      const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
-      const toStore = { spacing: payload.spacing || DEFAULT_SPACING, tagOptions: payload.tagOptions || DEFAULT_TAG_OPTIONS };
-      await figma.clientStorage.setAsync('syv_last_config', toStore);
+  const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
+  const spacingToStore = payload.spacing || DEFAULT_SPACING;
+  const tagToStore = normalizeTagOptions(payload.tagOptions ?? DEFAULT_TAG_OPTIONS);
+  const toStore = { spacing: spacingToStore, tagOptions: tagToStore };
+  await figma.clientStorage.setAsync('syv_last_config', toStore);
     } catch (e) {
       console.warn('Failed to save settings to clientStorage:', e);
     }
@@ -345,9 +353,9 @@ figma.ui.onmessage = async (msg: unknown) => {
       const sel = figma.currentPage.selection;
       if (sel.length === 1 && isComponentSet(sel[0])) {
         const cs = sel[0] as ComponentSetNode;
-        const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
-        if (payload.spacing) cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(payload.spacing));
-        if (payload.tagOptions) cs.setPluginData(PLUGIN_KEYS.tag, JSON.stringify(payload.tagOptions));
+  const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
+  if (payload.spacing) cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(payload.spacing));
+  if (payload.tagOptions) cs.setPluginData(PLUGIN_KEYS.tag, JSON.stringify(normalizeTagOptions(payload.tagOptions)));
       }
     } catch (e) {
       console.warn('Failed to write pluginData on ComponentSet:', e);
