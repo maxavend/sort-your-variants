@@ -563,12 +563,38 @@ async function organizeVariantsCoreV3(
   const gap = Number(spacing.gap);
   const groupSpacing = Number(spacing.groups);
 
+  // Compute effective bounding rects for each variant (use absoluteRenderBounds when available)
+  type EffRect = { absX: number; absY: number; width: number; height: number; localLeft: number; localTop: number };
+  const compAbs = componentSet.absoluteRenderBounds;
+  const compAbsX = compAbs ? compAbs.x : componentSet.x;
+  const compAbsY = compAbs ? compAbs.y : componentSet.y;
+
+  const effRects: EffRect[] = variants.map((v) => {
+    const abs = v.absoluteRenderBounds;
+    if (abs) {
+      return { absX: abs.x, absY: abs.y, width: abs.width, height: abs.height, localLeft: abs.x - compAbsX, localTop: abs.y - compAbsY };
+    }
+    // fallback to node-local geometry when absolute render bounds are not available
+    return { absX: compAbsX + v.x, absY: compAbsY + v.y, width: v.width, height: v.height, localLeft: v.x, localTop: v.y };
+  });
+
   const colWidths: number[] = colValues.map(cv => {
-    let w = 0; for (const v of variants) { const p = v.variantProperties as Record<string,string> | null; if (p && p[colKey] === cv) w = Math.max(w, v.width); }
+    let w = 0;
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      const p = v.variantProperties as Record<string,string> | null;
+      if (p && p[colKey] === cv) w = Math.max(w, effRects[i].width);
+    }
     return w;
   });
+
   const rowHeights: number[] = rowValues.map(rv => {
-    let h = 0; for (const v of variants) { const p = v.variantProperties as Record<string,string> | null; if (p && p[rowKey] === rv) h = Math.max(h, v.height); }
+    let h = 0;
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      const p = v.variantProperties as Record<string,string> | null;
+      if (p && p[rowKey] === rv) h = Math.max(h, effRects[i].height);
+    }
     return h;
   });
 
@@ -589,23 +615,34 @@ async function organizeVariantsCoreV3(
   for (let i = 0; i < variants.length; i++) {
     const v = variants[i];
     const p = v.variantProperties as Record<string,string> | null; if (!p) continue;
-    const cIdx = Math.max(0, colValues.indexOf(p[colKey] ?? colValues[0]));
-    const rIdx = Math.max(0, rowValues.indexOf(p[rowKey] ?? rowValues[0]));
+  const idx = i;
+  const cIdx = Math.max(0, colValues.indexOf(p[colKey] ?? colValues[0]));
+  const rIdx = Math.max(0, rowValues.indexOf(p[rowKey] ?? rowValues[0]));
 
-    const cgId = colGroupIdFor(p);
-    const cgIdx = Math.max(0, colGroupIds.indexOf(cgId));
+  const cgId = colGroupIdFor(p);
+  const cgIdx = Math.max(0, colGroupIds.indexOf(cgId));
 
-    const rgId = rowGroupIdFor(p);
-    const rgIdx = Math.max(0, rowGroupIds.indexOf(rgId));
+  const rgId = rowGroupIdFor(p);
+  const rgIdx = Math.max(0, rowGroupIds.indexOf(rgId));
 
-    // Place column-group blocks left-to-right, preserving Figma property order
-    const xBlock = padding + cgIdx * (blockW + groupSpacing);
-    const yBand  = padding + rgIdx * (blockH + groupSpacing);
+  // Place column-group blocks left-to-right, preserving Figma property order
+  const xBlock = padding + cgIdx * (blockW + groupSpacing);
+  const yBand  = padding + rgIdx * (blockH + groupSpacing);
 
-    const cx = xBlock + colOffset[cIdx] + (colWidths[cIdx] - v.width) / 2;
-    const cy = yBand  + rowCenter[rIdx] - v.height / 2;
+  // Desired center within the Component Set local coordinates
+  const desiredCenterX = xBlock + colOffset[cIdx] + (colWidths[cIdx] / 2);
+  const desiredCenterY = yBand + rowCenter[rIdx];
 
-    v.x = cx; v.y = cy;
+  const eff = effRects[idx];
+  // eff.localLeft is the left of the rendered bounding box relative to the ComponentSet origin
+  const deltaX = eff.localLeft - v.x; // overflow/offset from node origin to bounding box
+  const deltaY = eff.localTop - v.y;
+
+  // Compute new node origin so that the rendered bounding box centers at desiredCenter
+  const newVX = desiredCenterX - (eff.width / 2) - deltaX;
+  const newVY = desiredCenterY - (eff.height / 2) - deltaY;
+
+  v.x = newVX; v.y = newVY;
   }
 
   // Resize ComponentSet to fit all groups
