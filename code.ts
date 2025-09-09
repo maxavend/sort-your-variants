@@ -7,6 +7,12 @@
 // 5. Added role normalization (alias & case-insensitive) for Column/Row/Col Group/Row Group.
 // 6. Removed all obsolete code related to 'propertyOrder' and drag-and-drop.
 
+// ---------------- Debug helpers ----------------
+const DEBUG: boolean = false; // toggle to enable/disable verbose logging
+function dbg(label: string, data?: unknown) { if (DEBUG) console.log(`[SYV] ${label}`, data ?? ''); }
+function dbgi(label: string, data: unknown[]) { if (DEBUG) console.log(`[SYV] ${label} ->`, JSON.stringify(data)); }
+function _warn(label: string, data?: unknown) { console.warn(`[SYV] ${label}`, data ?? ''); }
+
 // ---------------- Types ----------------
 interface SpacingPrefs { padding: number; gap: number; groups: number }
 interface VariantPropsMap { [key: string]: { values: string[] } }
@@ -67,14 +73,39 @@ function isComponentSet(node: SceneNode | null): node is ComponentSetNode { retu
 function hasLayoutMode(node: BaseNode | null): node is AutoLayoutNode { return !!node && (node as { layoutMode?: unknown }).layoutMode !== undefined; }
 
 function indexOfStr(arr: string[], v: string | undefined): number { if (!v) return -1; for (let i = 0; i < arr.length; i++) if (arr[i] === v) return i; return -1; }
-function pushUnique(arr: string[], v: string): void { if (indexOfStr(arr, v) === -1) arr.push(v); }
+function _pushUnique(arr: string[], v: string): void { if (indexOfStr(arr, v) === -1) arr.push(v); }
 
 function deriveValueOrder(variants: ComponentNode[], key: string, defined: string[]): string[] {
+  // Gather values in the order variants appear, without sorting.
   const present: string[] = [];
+  const seen = new Set<string>();
   for (const variant of variants) {
-    const props = variant.variantProperties as Record<string, string> | null; if (!props) continue; const val = props[key]; if (val) pushUnique(present, val);
+    const props = variant.variantProperties as Record<string, string> | null;
+    if (!props) continue;
+    const val = props[key];
+    if (val && !seen.has(val)) {
+      present.push(val);
+      seen.add(val);
+    }
   }
-  const ordered: string[] = []; for (const d of defined) if (indexOfStr(present, d) !== -1) ordered.push(d); for (const p of present) if (indexOfStr(ordered, p) === -1) ordered.push(p); return ordered;
+  // Build the final order: strictly follow 'defined' (when provided), then append any extra 'present'.
+  const ordered: string[] = [];
+  const added = new Set<string>();
+  for (let i = 0; i < defined.length; i++) {
+    const d = defined[i];
+    if (seen.has(d) && !added.has(d)) {
+      ordered.push(d);
+      added.add(d);
+    }
+  }
+  for (let i = 0; i < present.length; i++) {
+    const p = present[i];
+    if (!added.has(p)) {
+      ordered.push(p);
+      added.add(p);
+    }
+  }
+  return ordered;
 }
 
 function isBooleanLiteral(val: string | undefined | null): boolean {
@@ -156,6 +187,19 @@ function ensureSetFreePositioning(componentSet: ComponentSetNode) {
   if (hasLayoutMode(componentSet) && componentSet.layoutMode !== 'NONE') { componentSet.layoutMode = 'NONE'; }
 }
 
+// Remove any prior debug overlays and tag groups for this ComponentSet across the page
+function cleanupDebugArtifacts(cs: ComponentSetNode) {
+  const page = figma.currentPage;
+  const overlayName = `${cs.name} debug-overlay`;
+  const tagsName = `${cs.name} tags`;
+  const targets = page.findAll((n) =>
+    n.type === 'GROUP' && (n.name === overlayName || n.name === tagsName)
+  ) as GroupNode[];
+  for (const g of targets) {
+    try { g.remove(); } catch (_) { /* noop */ }
+  }
+}
+
 // --- Role normalization helpers (alias & case-insensitive) ---
 function normalizeRole(v?: string): 'column' | 'row' | 'column-group' | 'row-group' | '' {
   if (!v) return '';
@@ -173,6 +217,7 @@ function normalizeRoleMap(input: Record<string, string>): Record<string, 'column
     const role = normalizeRole(input[k]);
     if (role) out[k] = role;
   }
+  dbg('normalizeRoleMap.out', out);
   return out;
 }
 
@@ -183,6 +228,7 @@ function snapshotSelection() {
     const cs = sel[0];
     let properties: VariantPropsMap = {};
     try { properties = cs.variantGroupProperties as VariantPropsMap; } catch (e) { console.warn('variantGroupProperties error:', e); }
+    dbg('snapshotSelection.properties.keys', Object.keys(properties));
     const preferences = getPreferences(cs);
     figma.ui.postMessage({
       type: 'selection-changed', componentSetId: cs.id, componentSetName: cs.name,
@@ -289,6 +335,8 @@ async function organizeByRoles(
     return '⚠️ Variant conflict. Ensure properties/values are consistent.';
   }
 
+  dbg('organizeByRoles.variantProps.keys', Object.keys(variantProps || {}));
+  dbg('organizeByRoles.roleMap.raw', roleMapRaw);
   // Normaliza roles (acepta alias y mayúsculas/espacios)
   const roleMap = normalizeRoleMap(roleMapRaw);
 
@@ -297,6 +345,11 @@ async function organizeByRoles(
   const rowKeys = Object.keys(roleMap).filter(k => roleMap[k] === 'row');
   const colGroupKeys = Object.keys(roleMap).filter(k => roleMap[k] === 'column-group');
   const rowGroupKeys = Object.keys(roleMap).filter(k => roleMap[k] === 'row-group');
+
+  dbgi('roles.colKeys', colKeys);
+  dbgi('roles.rowKeys', rowKeys);
+  dbgi('roles.colGroupKeys', colGroupKeys);
+  dbgi('roles.rowGroupKeys', rowGroupKeys);
 
   // Ajuste: Si el Component Set solo tiene UNA propiedad, permitir que el usuario la
   // asigne como Column o como Row y crear un eje sintético para la otra dimensión
@@ -311,13 +364,19 @@ async function organizeByRoles(
     if (colKeys.length === 1 && rowKeys.length === 0) {
       rowKeys.push(SYN_ROW);
       // Añadir entry mínima para que organizeVariantsCoreV3 pueda derivar valores.
-  variantProps[SYN_ROW] = { values: ['—'] };
+      variantProps[SYN_ROW] = { values: ['—'] };
+      dbg('single-prop.synth.rowKeys', rowKeys);
+      dbg('single-prop.synth.colKeys', colKeys);
+      dbg('single-prop.variantProps', variantProps);
     }
     // Si el usuario asignó la única propiedad como fila pero no hay column,
     // añadimos una columna sintética con un único valor.
     else if (rowKeys.length === 1 && colKeys.length === 0) {
       colKeys.push(SYN_COL);
-  variantProps[SYN_COL] = { values: ['—'] };
+      variantProps[SYN_COL] = { values: ['—'] };
+      dbg('single-prop.synth.rowKeys', rowKeys);
+      dbg('single-prop.synth.colKeys', colKeys);
+      dbg('single-prop.variantProps', variantProps);
     }
   }
 
@@ -457,28 +516,48 @@ async function organizeVariantsCoreV3(
 ): Promise<string | null> {
   // Prepare
   ensureSetFreePositioning(componentSet);
+  cleanupDebugArtifacts(componentSet);
   const tag: TagOptions | null = rawTag ? normalizeTagOptions(rawTag) : null;
 
-  const definedCols = variantProps[colKey]?.values || [];
-  const colValues = deriveValueOrder(variants, colKey, definedCols);
+  const definedCols = (variantProps[colKey]?.values || []) as string[];
+  let colValues = deriveValueOrder(variants, colKey, definedCols);
+  // Fallback for synthetic or missing column values: use defined order or a single placeholder
+  if (colValues.length === 0) {
+    colValues = definedCols.length > 0 ? [...definedCols] : ['—'];
+  }
+  dbgi('col.defined', definedCols);
+  dbgi('col.values', colValues);
 
-  const definedRows = variantProps[rowKey]?.values || [];
-  const rowValues = deriveValueOrder(variants, rowKey, definedRows);
+  const definedRows = (variantProps[rowKey]?.values || []) as string[];
+  let rowValues = deriveValueOrder(variants, rowKey, definedRows);
+  // Fallback for synthetic or missing row values: use defined order or a single placeholder
+  if (rowValues.length === 0) {
+    rowValues = definedRows.length > 0 ? [...definedRows] : ['—'];
+  }
+  dbgi('row.defined', definedRows);
+  dbgi('row.values', rowValues);
 
   // ---- Helpers de orden estable para values de una prop ----
   function stableOrderForPropValues(prop: string, present: string[]): string[] {
+    // 1) Respect the order defined in Figma for this property, if provided.
     const defined = (variantProps[prop]?.values || []) as string[];
     const picked: string[] = [];
-    // prioriza el orden definido en Figma (si existe)
+    // Keep a fast lookup to avoid duplicates.
+    const added = new Set<string>();
     for (let i = 0; i < defined.length; i++) {
       const d = defined[i];
-      if (present.indexOf(d) !== -1) picked.push(d);
+      if (present.indexOf(d) !== -1 && !added.has(d)) {
+        picked.push(d);
+        added.add(d);
+      }
     }
-    // agrega faltantes en orden alfabético
-    const presentSorted = [...present].sort((a, b) => a.localeCompare(b));
-    for (let i = 0; i < presentSorted.length; i++) {
-      const p = presentSorted[i];
-      if (picked.indexOf(p) === -1) picked.push(p);
+    // 2) Append any present values that are not listed in 'defined', in the order we first saw them.
+    for (let i = 0; i < present.length; i++) {
+      const p = present[i];
+      if (!added.has(p)) {
+        picked.push(p);
+        added.add(p);
+      }
     }
     return picked;
   }
@@ -536,11 +615,12 @@ async function organizeVariantsCoreV3(
       return cartesian(next, tail);
     };
 
-    const combos = cartesian([[]], colGroupKeys).map(parts => parts.join(''));
+    const combos = cartesian([[]], colGroupKeys).map(parts => parts.join(' | '));
     colGroupIds = combos.filter(id => colGroupIdsSet.has(id));
   }
+  dbgi('colGroupIds', colGroupIds);
 
-  // ---- Row group ids (multi-prop, ya soportado) ----
+  // ---- Row group ids (multi-prop, orden estable como columnas) ----
   type RowGroupId = string;
   const rowGroupIdsSet = new Set<RowGroupId>();
   function rowGroupIdFor(p: Record<string,string> | null): RowGroupId {
@@ -556,7 +636,40 @@ async function organizeVariantsCoreV3(
     const vp = variants[i].variantProperties as Record<string,string> | null;
     rowGroupIdsSet.add(rowGroupIdFor(vp));
   }
-  const rowGroupIds: RowGroupId[] = rowGroupKeys.length ? Array.from(rowGroupIdsSet) : ['__noRowGroup__'];
+  let rowGroupIds: RowGroupId[] = [];
+  if (!rowGroupKeys.length) {
+    rowGroupIds = ['__noRowGroup__'];
+  } else {
+    // valores presentes por prop (con orden estable)
+    const presentRowsByProp: Record<string, string[]> = {};
+    for (let kIdx = 0; kIdx < rowGroupKeys.length; kIdx++) {
+      const k = rowGroupKeys[kIdx];
+      const presentSet = new Set<string>();
+      for (let vIdx = 0; vIdx < variants.length; vIdx++) {
+        const p = (variants[vIdx].variantProperties as Record<string,string> | null);
+        presentSet.add(p?.[k] ?? '—');
+      }
+      presentRowsByProp[k] = stableOrderForPropValues(k, Array.from(presentSet));
+    }
+    // producto cartesiano en el orden estable
+    const cartesianRows = (acc: string[][], restKeys: string[]): string[][] => {
+      if (!restKeys.length) return acc;
+      const head = restKeys[0];
+      const tail = restKeys.slice(1);
+      const next: string[][] = [];
+      for (let i = 0; i < acc.length; i++) {
+        const row = acc[i];
+        const vals = presentRowsByProp[head];
+        for (let j = 0; j < vals.length; j++) {
+          next.push([...row, `${head}:${vals[j]}`]);
+        }
+      }
+      return cartesianRows(next, tail);
+    };
+    const combosRows = cartesianRows([[]], rowGroupKeys).map(parts => parts.join(' | '));
+    rowGroupIds = combosRows.filter(id => rowGroupIdsSet.has(id));
+  }
+  dbgi('rowGroupIds', rowGroupIds);
 
   // Measurements
   const padding = Number(spacing.padding);
@@ -603,6 +716,7 @@ async function organizeVariantsCoreV3(
 
   const rowCenter: number[] = []; if (rowValues.length){ rowCenter[0]=rowHeights[0]/2; for (let r=1;r<rowValues.length;r++){ rowCenter[r]=rowCenter[r-1] + (rowHeights[r-1]/2) + gap + (rowHeights[r]/2); } }
   const blockH = Math.max(0, rowHeights.reduce((a,b)=>a+b,0) + gap * Math.max(0,rowValues.length-1));
+  dbg('layout.metrics', { padding, gap, groupSpacing, blockW, blockH, cols: colValues.length, rows: rowValues.length });
 
   // Remove any previous tag group for this Component Set (replace, don't stack)
   if (componentSet.parent) {
@@ -611,49 +725,57 @@ async function organizeVariantsCoreV3(
     prev.forEach((g) => g.remove());
   }
 
-  // Place each variant
+  // Place each variant (logs per-node)
   for (let i = 0; i < variants.length; i++) {
     const v = variants[i];
     const p = v.variantProperties as Record<string,string> | null; if (!p) continue;
-  const idx = i;
-  const cIdx = Math.max(0, colValues.indexOf(p[colKey] ?? colValues[0]));
-  const rIdx = Math.max(0, rowValues.indexOf(p[rowKey] ?? rowValues[0]));
+    const idx = i;
+    const cIdx = Math.max(0, colValues.indexOf(p[colKey] ?? colValues[0]));
+    const rIdx = Math.max(0, rowValues.indexOf(p[rowKey] ?? rowValues[0]));
 
-  const cgId = colGroupIdFor(p);
-  const cgIdx = Math.max(0, colGroupIds.indexOf(cgId));
+    const cgId = colGroupIdFor(p);
+    const cgIdx = Math.max(0, colGroupIds.indexOf(cgId));
 
-  const rgId = rowGroupIdFor(p);
-  const rgIdx = Math.max(0, rowGroupIds.indexOf(rgId));
+    const rgId = rowGroupIdFor(p);
+    const rgIdx = Math.max(0, rowGroupIds.indexOf(rgId));
 
-  // Place column-group blocks left-to-right, preserving Figma property order
-  const xBlock = padding + cgIdx * (blockW + groupSpacing);
-  const yBand  = padding + rgIdx * (blockH + groupSpacing);
+    // Place column-group blocks left-to-right, preserving Figma property order
+    const xBlock = padding + cgIdx * (blockW + groupSpacing);
+    const yBand  = padding + rgIdx * (blockH + groupSpacing);
 
-  // Desired center within the Component Set local coordinates
-  const desiredCenterX = xBlock + colOffset[cIdx] + (colWidths[cIdx] / 2);
-  const desiredCenterY = yBand + rowCenter[rIdx];
+    // Desired center within the Component Set local coordinates
+    const desiredCenterX = xBlock + colOffset[cIdx] + (colWidths[cIdx] / 2);
+    const desiredCenterY = yBand + rowCenter[rIdx];
 
-  const eff = effRects[idx];
-  // eff.localLeft is the left of the rendered bounding box relative to the ComponentSet origin
-  const deltaX = eff.localLeft - v.x; // overflow/offset from node origin to bounding box
-  const deltaY = eff.localTop - v.y;
+    const eff = effRects[idx];
+    // eff.localLeft is the left of the rendered bounding box relative to the ComponentSet origin
+    const deltaX = eff.localLeft - v.x; // overflow/offset from node origin to bounding box
+    const deltaY = eff.localTop - v.y;
 
-  // Compute new node origin so that the rendered bounding box centers at desiredCenter
-  const newVX = desiredCenterX - (eff.width / 2) - deltaX;
-  const newVY = desiredCenterY - (eff.height / 2) - deltaY;
+    // Compute new node origin so that the rendered bounding box centers at desiredCenter
+    const newVX = desiredCenterX - (eff.width / 2) - deltaX;
+    const newVY = desiredCenterY - (eff.height / 2) - deltaY;
 
-  v.x = newVX; v.y = newVY;
+    v.x = newVX; v.y = newVY;
+    dbg('place.variant', {
+      name: v.name,
+      props: v.variantProperties,
+      cIdx, rIdx, cgIdx, rgIdx,
+      newVX, newVY
+    });
   }
 
-  // Resize ComponentSet to fit all groups
-  const compW = padding*2 + (blockW * colGroupIds.length) + groupSpacing * Math.max(0, colGroupIds.length - 1);
-  const compH = padding*2 + (blockH * rowGroupIds.length) + groupSpacing * Math.max(0, rowGroupIds.length - 1);
-  componentSet.resizeWithoutConstraints(compW, compH);
+  // (Removed: Visual debug overlay creation)
+  // (Removed: Resize ComponentSet to fit all groups -- now handled after tag creation)
 
   // --- Tags (chips) ---
+  dbg('tags.start', { colValues: colValues.length, rowValues: rowValues.length, colGroupIds: colGroupIds.length, rowGroupIds: rowGroupIds.length });
   const parentContainer: BaseNode & ChildrenMixin = (componentSet.parent as (BaseNode & ChildrenMixin)) || (figma.currentPage as unknown as BaseNode & ChildrenMixin);
   const baseX = componentSet.x; const baseY = componentSet.y;
   const tagsNodes: SceneNode[] = [];
+
+  // Track the widest horizontal span of column chips across all groups
+  let globalMaxColChipSpan = 0;
 
   if (tag) {
     // Defensive logging to help debug missing tag generation
@@ -710,10 +832,7 @@ async function organizeVariantsCoreV3(
           } else {
             maxTopChipHeight = Math.max(maxTopChipHeight, chip.height);
           }
-          const rb2 = chip.absoluteRenderBounds;
-          const effW = rb2 ? rb2.width : chip.width;
-          const minX = blockStartX; const maxX = blockStartX + blockW - effW;
-          chip.x = Math.max(minX, Math.min(maxX, chip.x));
+          // Removed horizontal clamping: do not restrict chip.x to blockW
         }
         return maxTopChipHeight;
       };
@@ -744,10 +863,24 @@ async function organizeVariantsCoreV3(
           chip.x = centerX - (rb.width / 2);
           const currentBottom = rb.y + rb.height;
           chip.y += (baselineY - currentBottom);
-          const minX = blockStartX; const maxX = blockStartX + blockW - rb.width;
-          chip.x = Math.max(minX, Math.min(maxX, chip.x));
+          // Removed horizontal clamping: do not restrict chip.x to blockW
         }
         tagsNodes.push(chip);
+      }
+
+      // Measure total horizontal span of chips for this column-group block
+      let minXChip = Infinity;
+      let maxXChip = -Infinity;
+      for (let c = 0; c < chips.length; c++) {
+        const rb = chips[c].absoluteRenderBounds;
+        if (!rb) continue;
+        if (rb.x < minXChip) minXChip = rb.x;
+        const right = rb.x + rb.width;
+        if (right > maxXChip) maxXChip = right;
+      }
+      if (isFinite(minXChip) && isFinite(maxXChip)) {
+        const span = maxXChip - minXChip;
+        if (span > globalMaxColChipSpan) globalMaxColChipSpan = span;
       }
 
       // Column-group chip (top): compuesto por TODAS las props de column-group
@@ -896,6 +1029,12 @@ async function organizeVariantsCoreV3(
       }
     }
   }
+
+  // Resize ComponentSet to fit grid width OR chip span, whichever is wider
+  const compW_base = padding*2 + (blockW * colGroupIds.length) + groupSpacing * Math.max(0, colGroupIds.length - 1);
+  const compW = Math.max(compW_base, Math.ceil(globalMaxColChipSpan + padding));
+  const compH = padding*2 + (blockH * rowGroupIds.length) + groupSpacing * Math.max(0, rowGroupIds.length - 1);
+  componentSet.resizeWithoutConstraints(compW, compH);
 
   if (tagsNodes.length > 0) {
     const groupParent: BaseNode & ChildrenMixin = (componentSet.parent as (BaseNode & ChildrenMixin)) || (figma.currentPage as unknown as BaseNode & ChildrenMixin);
