@@ -1,0 +1,33 @@
+{
+  "brand": "Sort your variants",
+  "tagline": "Lay out any component set as a clean, labeled grid in one click.",
+  "brief": "Plugin de Figma que ordena las variantes de un Component Set en una grilla con etiquetas. Debe sentirse nativo de Apple: preciso, calmado y sin ruido, y leerse a 16 px en la lista de plugins.",
+  "adjectives": ["ordenado", "preciso", "calmado", "nativo"],
+  "criteria": "Distinto del morado de Figma y de las grillas genéricas, legible a 16 px, funciona a una tinta.",
+  "mockups": ["app-icon", "favicon-tab", "readme", "website", "sticker", "social"],
+  "nav": ["Features", "How it works", "Install"],
+  "brand_color": "#0A84FF",
+  "tile_color": "#1D1D1F",
+  "greyscale": false,
+  "final": true,
+  "designer": "Diseño digital",
+  "concepts": [
+    {
+      "name": "Encaje · Ordenado",
+      "symbol": "logo/sort-your-variants-symbol.svg",
+      "lockup": "logo/sort-your-variants-horizontal.svg",
+      "stacked": "logo/sort-your-variants-stacked.svg",
+      "avatar": "logo/sort-your-variants-icon.svg",
+      "symbol_on_tile": "logo/sort-your-variants-symbol.svg",
+      "symbol_on_dark": "logo/sort-your-variants-symbol.svg",
+      "lockup_on_dark": "logo/sort-your-variants-horizontal-on-dark.svg",
+      "idea": "Tres variantes ya en su sitio y la cuarta girando para encajar: el momento en que el set queda ordenado.",
+      "rationale": [
+        "Los colores siguen el espectro de Apple de cálido a frío, en orden de lectura",
+        "Un solo detalle propio: la variante girada 15°",
+        "Cuatro formas grandes que se leen a 16 px"
+      ]
+    }
+  ],
+  "recommendation": "Encaje · Ordenado: una idea, cuatro formas y los colores del sistema de Apple."
+}

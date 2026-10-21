@@ -75,6 +75,7 @@ Corre el lint, compila y verifica que el plugin esté listo. Los pasos, los text
 - `manifest.json` - Configuración del plugin
 - `scripts/check-release.mjs` - Verificación previa a publicar
 - `docs/publishing/` - Ícono, portada, textos y checklist para la Comunidad de Figma
+- `docs/brand/` - Logo: archivos, colores, reglas de uso y presentación
 - `docs/reference/Figma UI Kit.html` - Referencia visual del diseño anterior
 
 ## Tecnologías

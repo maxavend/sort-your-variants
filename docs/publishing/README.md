@@ -8,10 +8,13 @@ Todo lo necesario para publicar el plugin desde Figma Desktop. Figma solo acepta
 |---|---|
 | `icon.png` | Ícono del plugin (128 × 128) |
 | `cover.png` | Portada (1920 × 1080) |
-| `gallery-ui.png` | Imagen extra para el carrusel (1920 × 1080): la interfaz en tema oscuro y claro |
-| `source/` | Fuentes editables: `icon.svg`, `cover.html` y las capturas de la interfaz |
+| `gallery-1-before-after.png` | Carrusel 1: un set desordenado y el mismo set ordenado y etiquetado |
+| `gallery-2-roles.png` | Carrusel 2: los cuatro roles de propiedad (Column, Row, Col group, Row group) |
+| `gallery-3-labels.png` | Carrusel 3: estilo por defecto, estilo propio y etiquetas rotadas |
+| `gallery-4-ui.png` | Carrusel 4: la interfaz en tema claro y oscuro |
+| `source/` | Fuentes editables: `icon.svg`, `community.html` (portada y carrusel) y las capturas de la interfaz |
 
-> Antes de subir los gráficos, compara sus medidas con las que indica el modal de publicación. Si Figma pide otras, ajusta `source/cover.html` y vuelve a renderizar (ver "Regenerar los gráficos").
+> Antes de subir los gráficos, compara sus medidas con las que indica el modal de publicación. Si Figma pide otras, ajusta `source/community.html` y vuelve a renderizar (ver "Regenerar los gráficos").
 
 ## Checklist antes de publicar
 
@@ -82,14 +85,16 @@ Agrega un correo o un enlace (por ejemplo, la página de issues del repositorio)
 - **Íconos de Figma UI3:** tomados de `@create-figma-plugin/ui` (MIT).
 
 ## Regenerar los gráficos
-Desde `docs/publishing/`, con Google Chrome instalado:
+Desde `docs/publishing/`, con Google Chrome instalado. `source/community.html` dibuja cada imagen según `?s=`: `cover`, `before-after`, `roles`, `labels` o `ui`. Las grillas se arman con las mismas medidas que usa el plugin (padding 48, gap 48, grupos 128, etiquetas a 24).
 
 ```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1920,1080 --allow-file-access-from-files --screenshot="$PWD/cover.png" "file://$PWD/source/cover.html"
+for s in cover:cover before-after:gallery-1-before-after roles:gallery-2-roles labels:gallery-3-labels ui:gallery-4-ui; do "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1920,1080 --allow-file-access-from-files --virtual-time-budget=8000 --screenshot="$PWD/${s#*:}.png" "file://$PWD/source/community.html?s=${s%%:*}"; done
 ```
+
+El ícono sale de `source/icon.svg`, que es una copia de `docs/brand/logo/sort-your-variants-icon.svg` a 128 × 128:
 
 ```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1920,1080 --allow-file-access-from-files --screenshot="$PWD/gallery-ui.png" "file://$PWD/source/cover.html?gallery"
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=128,128 --default-background-color=00000000 --screenshot="$PWD/icon.png" "file://$PWD/source/icon.svg"
 ```
 
-El ícono se puede exportar desde `source/icon.svg` con cualquier editor (o abriéndolo en Figma) a 128 × 128.
+El logo, los colores y las reglas de uso están en [docs/brand](../brand/README.md).

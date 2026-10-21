@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sort your variants · Community images</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<!-- One page, five 1920x1080 images. Pick one with ?s=cover | before-after | roles | labels | ui
+     Render commands are in docs/publishing/README.md. -->
+<style>
+  :root {
+    --ink: #1D1D1F; --muted: #6E6E73; --bg: #F5F5F7; --card: #FFFFFF;
+    --orange: #FF9500; --pink: #FF2D55; --purple: #AF52DE; --blue: #0A84FF;
+    --figma-purple: #9747FF;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; }
+  body { background: var(--bg); color: var(--ink); font-family: Inter, sans-serif; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+  .slide { position: absolute; inset: 0; }
+
+  .eyebrow { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 20px;
+    background: linear-gradient(90deg, var(--orange), var(--pink) 35%, var(--purple) 65%, var(--blue));
+    -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block; }
+  h1 { font-size: 104px; line-height: 1.0; letter-spacing: -0.035em; font-weight: 700; margin: 0; }
+  h2 { font-size: 80px; line-height: 1.04; letter-spacing: -0.03em; font-weight: 700; margin: 0; }
+  .lede { font-size: 34px; line-height: 1.32; letter-spacing: -0.012em; color: var(--muted); margin: 28px 0 0; font-weight: 500; }
+  .card { position: absolute; background: var(--card); border-radius: 36px; box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 30px 80px rgba(0,0,0,.08); overflow: hidden; }
+  .card .stage { position: absolute; inset: 0; }
+  .tag { position: absolute; font-size: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+  /* ---- Figma canvas pieces (units are Figma px; boards get scaled to fit) ---- */
+  .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .set { position: absolute; border: 1.5px dashed var(--figma-purple); border-radius: 6px; }
+  .set-name { position: absolute; left: 0; top: -26px; font-size: 14px; font-weight: 500; color: var(--figma-purple); display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .set-name i { width: 12px; height: 12px; border: 1.5px dashed var(--figma-purple); border-radius: 2px; transform: rotate(45deg) scale(.8); }
+  .btn { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+  .chip { position: absolute; padding: 8px; border-radius: var(--chip-r, 8px); font-size: 16px; line-height: 19px; white-space: nowrap;
+    background: var(--chip-bg, #E5E5E5); color: var(--chip-fg, #404040); box-shadow: inset 0 0 0 var(--chip-sw, 1px) var(--chip-stroke, #A3A3A3); transform-origin: 0 0; }
+  .chip b { font-weight: 700; }
+  .brace { position: absolute; background: var(--brace, #A3A3A3); }
+
+  /* roles legend */
+  .roles { list-style: none; padding: 0; margin: 56px 0 0; display: grid; gap: 26px; }
+  .roles li { display: grid; grid-template-columns: 22px 1fr; gap: 0 20px; align-items: baseline; }
+  .roles .dot { width: 18px; height: 18px; border-radius: 6px; transform: translateY(2px); }
+  .roles strong { font-size: 30px; letter-spacing: -0.015em; }
+  .roles span { grid-column: 2; font-size: 24px; color: var(--muted); margin-top: 4px; }
+
+  .features { display: flex; gap: 36px; margin-top: 56px; }
+  .features div { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 500; letter-spacing: -0.01em; }
+  .features i { width: 16px; height: 16px; border-radius: 5px; }
+
+  .panel { position: absolute; border-radius: 22px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 30px 80px rgba(0,0,0,.16); background: #fff; }
+  .panel img { position: absolute; left: 0; display: block; }
+  .panel.dark { box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 30px 80px rgba(0,0,0,.3); background: #2c2c2c; }
+  .arrow { position: absolute; width: 72px; height: 72px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; box-shadow: 0 12px 30px rgba(0,0,0,.2); }
+</style>
+</head>
+<body>
+
+<!-- 1. Cover -->
+<section class="slide" id="cover" hidden>
+  <div style="position:absolute; left:128px; top:236px; width:760px">
+    <img src="../../brand/logo/sort-your-variants-icon.svg" width="136" height="136" alt="" style="display:block; margin-bottom:48px; filter: drop-shadow(0 14px 28px rgba(0,0,0,.12))">
+    <h1>Sort your<br>variants</h1>
+    <p class="lede">Lay out any component set as a clean, labeled grid in one click.</p>
+    <div class="features">
+      <div><i style="background:var(--orange)"></i>Columns &amp; rows</div>
+      <div><i style="background:var(--pink)"></i>Groups</div>
+      <div><i style="background:var(--blue)"></i>Styled labels</div>
+    </div>
+  </div>
+  <div class="card" style="left:960px; top:96px; width:840px; height:888px"><div class="stage" data-grid="cover" data-pad="72"></div></div>
+</section>
+
+<!-- 2. Before / after -->
+<section class="slide" id="before-after" hidden>
+  <div style="position:absolute; left:0; right:0; top:92px; text-align:center">
+    <h2>From a pile of variants<br>to a grid you can read.</h2>
+  </div>
+  <div class="tag" style="left:136px; top:338px">Before</div>
+  <div class="card" style="left:120px; top:384px; width:800px; height:616px"><div class="stage" data-grid="messy" data-pad="64" data-sync="1"></div></div>
+  <div class="arrow" style="left:924px; top:656px">
+    <svg width="32" height="32" viewBox="0 0 32 32"><path d="M7 16h17M17 9l7 7-7 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div class="tag" style="left:1016px; top:338px">After</div>
+  <div class="card" style="left:1000px; top:384px; width:800px; height:616px"><div class="stage" data-grid="sorted" data-pad="48" data-sync="1"></div></div>
+</section>
+
+<!-- 3. Roles -->
+<section class="slide" id="roles" hidden>
+  <div style="position:absolute; left:128px; top:150px; width:640px">
+    <div class="eyebrow">Property roles</div>
+    <h2>Give every property a role.</h2>
+    <ul class="roles">
+      <li><i class="dot" style="background:var(--orange)"></i><strong>Column</strong><span>One property sets the columns.</span></li>
+      <li><i class="dot" style="background:var(--pink)"></i><strong>Row</strong><span>Another sets the rows.</span></li>
+      <li><i class="dot" style="background:var(--purple)"></i><strong>Col group</strong><span>Splits the columns into blocks.</span></li>
+      <li><i class="dot" style="background:var(--blue)"></i><strong>Row group</strong><span>Splits the rows into blocks, with a brace.</span></li>
+    </ul>
+  </div>
+  <div class="card" style="left:860px; top:96px; width:940px; height:888px"><div class="stage" data-grid="roles" data-pad="64"></div></div>
+</section>
+
+<!-- 4. Labels -->
+<section class="slide" id="labels" hidden>
+  <div style="position:absolute; left:0; right:0; top:92px; text-align:center">
+    <h2>Labels that match your file.</h2>
+    <p class="lede" style="margin-top:22px">Fill, stroke, radius, font, size and color, saved with each component set.</p>
+  </div>
+  <div class="tag" style="left:136px; top:378px">Default</div>
+  <div class="card" style="left:120px; top:424px; width:536px; height:560px"><div class="stage" data-grid="label-default" data-pad="44"></div></div>
+  <div class="tag" style="left:708px; top:378px">Your style</div>
+  <div class="card" style="left:692px; top:424px; width:536px; height:560px"><div class="stage" data-grid="label-custom" data-pad="44"></div></div>
+  <div class="tag" style="left:1280px; top:378px">Rotates when tight</div>
+  <div class="card" style="left:1264px; top:424px; width:536px; height:560px"><div class="stage" data-grid="label-rotate" data-pad="44"></div></div>
+</section>
+
+<!-- 5. UI -->
+<section class="slide" id="ui" hidden>
+  <div style="position:absolute; left:128px; top:300px; width:700px">
+    <div class="eyebrow">Built with Figma's own UI</div>
+    <h2>At home in<br>light and dark.</h2>
+    <p class="lede">The panel follows your Figma theme and remembers your last setup.</p>
+  </div>
+  <div class="panel" style="left:900px; top:80px; width:420px; height:1000px; border-radius:22px 22px 0 0">
+    <img src="ui-light-full.png" style="width:420px; top:0" alt="">
+  </div>
+  <div class="panel dark" style="left:1380px; top:80px; width:420px; height:1000px; border-radius:22px 22px 0 0">
+    <img src="ui-dark-full.png" style="width:420px; top:0" alt="">
+  </div>
+</section>
+
+<script>
+// ---------- variant data (matches the "Button" set in the UI screenshots) ----------
+const SIZES = [ { v: 'Small', w: 80, h: 32, f: 13 }, { v: 'Medium', w: 96, h: 40, f: 15 }, { v: 'Large', w: 112, h: 48, f: 17 } ];
+const STATES = ['Default', 'Hover', 'Pressed', 'Disabled'];
+const TYPES = ['Primary', 'Secondary'];
+const THREE = ['Default', 'Hover', 'Disabled'];
+const PAINT = {
+  Primary:   { Default: ['#0A84FF', '#fff'], Hover: ['#0077ED', '#fff'], Pressed: ['#0062CC', '#fff'], Disabled: ['#D1D1D6', '#8E8E93'] },
+  Secondary: { Default: ['#E8E8ED', '#1D1D1F'], Hover: ['#DCDCE1', '#1D1D1F'], Pressed: ['#CDCDD2', '#1D1D1F'], Disabled: ['#F2F2F7', '#AEAEB2'] },
+};
+// Plugin constants (code.ts)
+const PAD = 48, GAP = 48, GROUP_GAP = 128, TAG_GAP = 24, CONNECTOR = 12, GROUP_CHIP_GAP = 24, ROW_H = 48;
+
+function el(parent, cls, style, html) {
+  const e = document.createElement('div');
+  e.className = cls; Object.assign(e.style, style || {}); if (html != null) e.innerHTML = html;
+  parent.appendChild(e); return e;
+}
+function button(parent, size, state, type, x, y) {
+  const [bg, fg] = PAINT[type][state];
+  return el(parent, 'btn', { left: x + 'px', top: y + 'px', width: size.w + 'px', height: size.h + 'px', background: bg, color: fg, fontSize: size.f + 'px' }, 'Button');
+}
+function chip(parent, html, vars) {
+  const c = el(parent, 'chip', {}, html);
+  for (const k in (vars || {})) c.style.setProperty(k, vars[k]);
+  return c;
+}
+
+// tint: { col, row, group } chip variable sets; style: chip variables for all chips
+function sortedGrid(board, o = {}) {
+  const sizes = o.sizes || SIZES, states = o.states || STATES, types = o.types || TYPES;
+  const colW = sizes.map(s => o.colW || s.w);
+  const colX = []; let x = PAD;
+  colW.forEach(w => { colX.push(x); x += w + GAP; });
+  const setW = x - GAP + PAD;
+  const blockH = states.length * ROW_H + (states.length - 1) * GAP;
+  const setH = PAD * 2 + types.length * blockH + (types.length - 1) * GROUP_GAP;
+  const set = el(board, 'set', { left: 0, top: 0, width: setW + 'px', height: setH + 'px' });
+  el(board, 'set-name', {}, '<i></i>Button');
+  const rowY = (g, r) => PAD + g * (blockH + GROUP_GAP) + r * (ROW_H + GAP);
+  types.forEach((t, g) => states.forEach((st, r) => sizes.forEach((s, c) => {
+    button(board, s, st, t, colX[c] + (colW[c] - s.w) / 2, rowY(g, r) + (ROW_H - s.h) / 2);
+  })));
+  if (o.labels === false) return;
+  const vars = o.style || {};
+  const tint = o.tint || {};
+  // column chips
+  const colChips = sizes.map((s, c) => chip(board, o.colText ? o.colText[c] : s.v, { ...vars, ...tint.col }));
+  const rotate = !!o.rotate;
+  colChips.forEach((ch, c) => {
+    const w = ch.offsetWidth, h = ch.offsetHeight;
+    const cx = colX[c] + colW[c] / 2;
+    if (rotate) { // Figma rotation 90 = counter-clockwise; bottom sits TAG_GAP above the set
+      ch.style.transform = 'rotate(-90deg)';
+      ch.style.left = (cx - h / 2) + 'px'; ch.style.top = (-TAG_GAP) + 'px';
+    } else {
+      ch.style.left = (cx - w / 2) + 'px'; ch.style.top = (-TAG_GAP - h) + 'px';
+    }
+  });
+  // row chips + group chip with brace
+  types.forEach((t, g) => {
+    const chips = states.map((st, r) => chip(board, st, { ...vars, ...tint.row }));
+    let minLeft = 0;
+    chips.forEach((ch, r) => {
+      const w = ch.offsetWidth, h = ch.offsetHeight;
+      const l = -TAG_GAP - w; minLeft = Math.min(minLeft, l);
+      ch.style.left = l + 'px'; ch.style.top = (rowY(g, r) + ROW_H / 2 - h / 2) + 'px';
+    });
+    if (types.length < 2 && !o.groupAlways) return;
+    const top = rowY(g, 0) + ROW_H / 2 - chips[0].offsetHeight / 2;
+    const bottom = rowY(g, states.length - 1) + ROW_H / 2 + chips[0].offsetHeight / 2;
+    const bx = minLeft - GROUP_CHIP_GAP;
+    const bw = parseFloat(vars['--brace-w'] || 1), bc = (tint.braceColor || vars['--brace'] || '#A3A3A3');
+    el(board, 'brace', { left: (bx - bw) + 'px', top: top + 'px', width: bw + 'px', height: (bottom - top) + 'px', background: bc });
+    const mid = (top + bottom) / 2;
+    el(board, 'brace', { left: (bx - bw - CONNECTOR) + 'px', top: (mid - bw / 2) + 'px', width: CONNECTOR + 'px', height: bw + 'px', background: bc });
+    const gc = chip(board, `<b>Type</b>: ${t}`, { ...vars, ...tint.group });
+    gc.style.left = (bx - bw - CONNECTOR - gc.offsetWidth) + 'px';
+    gc.style.top = (mid - gc.offsetHeight / 2) + 'px';
+  });
+}
+
+// What a fresh component set looks like: one wrapped row in creation order, no labels.
+function messyGrid(board, types = TYPES) {
+  const all = [];
+  types.forEach(t => STATES.forEach(st => SIZES.forEach(s => all.push({ t, st, s }))));
+  // deterministic shuffle
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+  const perRow = types.length > 1 ? 5 : 4, gap = 20, pad = 20;
+  let x = pad, y = pad, rowH = 0, n = 0, maxX = 0;
+  all.forEach(v => {
+    if (n === perRow) { x = pad; y += rowH + gap; rowH = 0; n = 0; }
+    button(board, v.s, v.st, v.t, x, y);
+    x += v.s.w + gap; rowH = Math.max(rowH, v.s.h); n++; maxX = Math.max(maxX, x);
+  });
+  el(board, 'set', { left: 0, top: 0, width: (maxX - gap + pad) + 'px', height: (y + rowH + pad) + 'px' });
+  el(board, 'set-name', {}, '<i></i>Button');
+}
+
+function tintVars(color) {
+  return { '--chip-bg': color + '1F', '--chip-stroke': color, '--chip-fg': '#1D1D1F' };
+}
+
+const GRIDS = {
+  cover: b => sortedGrid(b, { states: THREE }),
+  sorted: b => sortedGrid(b, { types: ['Primary'] }),
+  messy: b => messyGrid(b, ['Primary']),
+  roles: b => sortedGrid(b, { states: THREE, tint: { col: tintVars('#FF9500'), row: tintVars('#FF2D55'), group: tintVars('#0A84FF'), braceColor: '#0A84FF' } }),
+  'label-default': b => sortedGrid(b, { types: ['Primary'], states: THREE }),
+  'label-custom': b => sortedGrid(b, { types: ['Primary'], states: THREE,
+    style: { '--chip-bg': '#1D1D1F', '--chip-fg': '#FFFFFF', '--chip-stroke': 'transparent', '--chip-sw': '0px', '--chip-r': '999px', '--brace': '#1D1D1F', '--brace-w': '2' } }),
+  'label-rotate': b => sortedGrid(b, { types: ['Primary'], states: THREE, rotate: true,
+    sizes: [ { v: 'Small', w: 32, h: 32, f: 11 }, { v: 'Medium', w: 40, h: 40, f: 12 }, { v: 'Large', w: 48, h: 48, f: 13 } ],
+    colText: ['Extra small', 'Medium', 'Extra large'], colW: 48 }),
+};
+// icon-only buttons for the narrow example
+const _button = button;
+button = function (parent, size, state, type, x, y) {
+  const b = _button(parent, size, state, type, x, y);
+  if (size.w === size.h) { b.textContent = '+'; b.style.fontSize = (size.h * 0.55) + 'px'; b.style.fontWeight = 500; }
+  return b;
+};
+
+function measure(stage) {
+  const board = el(stage, 'board', {});
+  GRIDS[stage.dataset.grid](board);
+  // bounds of everything drawn (rotated chips included)
+  const sr = board.getBoundingClientRect();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const c of board.children) {
+    const r = c.getBoundingClientRect();
+    minX = Math.min(minX, r.left - sr.left); minY = Math.min(minY, r.top - sr.top);
+    maxX = Math.max(maxX, r.right - sr.left); maxY = Math.max(maxY, r.bottom - sr.top);
+  }
+  const pad = +stage.dataset.pad || 48;
+  const availW = stage.clientWidth - pad * 2, availH = stage.clientHeight - pad * 2;
+  const w = maxX - minX, h = maxY - minY;
+  return { stage, board, pad, availW, availH, w, h, minX, minY, k: Math.min(availW / w, availH / h, 1.4) };
+}
+function apply(m, k) {
+  const ox = m.pad + (m.availW - m.w * k) / 2 - m.minX * k, oy = m.pad + (m.availH - m.h * k) / 2 - m.minY * k;
+  m.board.style.transform = `translate(${ox}px, ${oy}px) scale(${k})`;
+}
+
+const which = new URLSearchParams(location.search).get('s') || 'cover';
+document.getElementById(which).hidden = false;
+document.fonts.ready.then(() => {
+  const ms = [...document.querySelectorAll(`#${which} .stage`)].map(measure);
+  const synced = ms.filter(m => m.stage.dataset.sync);
+  const kSync = Math.min(...synced.map(m => m.k));
+  ms.forEach(m => apply(m, m.stage.dataset.sync ? kSync : m.k));
+});
+</script>
+</body>
+</html>
