@@ -1,0 +1,59 @@
+/* Layout and plugin-specific pieces. Controls come from FigUI3; colors are Figma's own tokens
+   (injected by Figma with themeColors: true, FigUI3 provides fallbacks outside Figma). */
+
+:root {
+  /* Figma UI3 menus are dark in both themes; FigUI3's light fallback pairs a white menu with white text */
+  --figma-color-bg-menu: #1e1e1e;
+}
+
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body { font-family: Inter, sans-serif; font-size: 11px; line-height: 16px; background: var(--figma-color-bg); color: var(--figma-color-text); }
+
+.plugin { display: flex; flex-direction: column; height: 100%; }
+.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+
+.section { padding: 4px 16px 12px; margin: 0; border-bottom: 1px solid var(--figma-color-border); display: grid; gap: 8px; }
+.section--last { border-bottom: 0; }
+.section fig-header { padding-left: 0; padding-right: 0; margin-right: -8px; }
+.section fig-header > h3 { margin: 0; padding-left: 0; font-size: 11px; font-weight: 600; }
+.section.is-off { padding-bottom: 4px; }
+.section.is-off .section-body { display: none; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stack { display: grid; gap: 8px; }
+.grid-2 > *, .grid-3 > *, .stack > * { min-width: 0; width: 100%; }
+
+.input-icon { display: inline-flex; color: var(--figma-color-icon-secondary); }
+.input-icon svg { width: 24px; height: 24px; }
+
+/* Selected component set */
+.selection { display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px 0 4px; border-radius: 5px; background: var(--figma-color-bg-secondary); }
+.selection-icon { display: flex; color: var(--figma-color-icon-component, var(--figma-color-text-component)); }
+.selection-name { flex: 1; min-width: 0; font-weight: 600; color: var(--figma-color-text-component); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selection-meta { color: var(--figma-color-text-secondary); white-space: nowrap; }
+.selection.is-empty .selection-icon { color: var(--figma-color-icon-tertiary); }
+.selection.is-empty .selection-name { font-weight: 400; color: var(--figma-color-text-secondary); }
+
+/* Property roles */
+.prop-list { display: grid; gap: 2px; }
+/* Negative margin keeps the names aligned with the section title while the hover fill gets some room */
+.prop-row { display: flex; align-items: center; gap: 8px; min-height: 32px; margin-left: -8px; padding: 0 0 0 8px; border-radius: 5px; }
+.prop-row:hover { background: var(--figma-color-bg-hover); }
+.prop-text { flex: 1; min-width: 0; display: grid; }
+.prop-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prop-values { color: var(--figma-color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prop-row fig-select { flex: 0 0 108px; width: 108px; max-width: 108px; }
+.empty { margin: 0; padding: 8px; border-radius: 5px; background: var(--figma-color-bg-secondary); color: var(--figma-color-text-secondary); }
+.hint { margin: 0; color: var(--figma-color-text-secondary); }
+#rolesSection.is-empty .hint { display: none; }
+
+/* Tag preview */
+.preview { height: 112px; border-radius: 5px; background: var(--figma-color-bg-secondary); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.preview-group { display: flex; align-items: center; }
+.preview-rows { display: grid; gap: 8px; margin-left: 24px; }
+.chip { display: inline-flex; align-items: center; padding: 6px; font-size: 12px; line-height: 1; white-space: nowrap; }
+.brace { position: relative; width: 12px; height: 56px; }
+.brace-tick { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); }
+
+.footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--figma-color-border); background: var(--figma-color-bg); }

@@ -4,18 +4,25 @@ Este plugin organiza automáticamente las variantes de un Component Set en una g
 
 ## ¿Qué hace?
 
-- Detecta Component Sets seleccionados con exactamente 2 propiedades de variante
-- Reorganiza visualmente los ComponentNodes en una grilla lógica
-- Añade etiquetas de texto a la izquierda (filas) y arriba (columnas)
-- Las etiquetas se crean como TextNodes simples y se agrupan fuera del Component Set
-- No modifica el auto layout ni crea instancias
+- Trabaja sobre un Component Set seleccionado, con una o más propiedades de variante
+- A cada propiedad se le asigna un rol:
+  - **Column**: define las columnas (una sola propiedad)
+  - **Row**: define las filas (una sola propiedad)
+  - **Col group** / **Row group**: separan la grilla en bloques; pueden ser varias propiedades
+- Añade etiquetas (chips) arriba de las columnas, a la izquierda de las filas y, por cada grupo, un chip con sus valores y una llave
+- Si las etiquetas de columna no caben, las rota 90°
+- Las etiquetas quedan en un grupo `"<nombre del set> tags"` junto al Component Set y se reemplazan en cada ejecución
+- Desactiva el auto layout del Component Set para poder posicionar las variantes libremente
+- Recuerda la última configuración usada y guarda en cada Component Set su espaciado y estilo de etiquetas
 
 ## Cómo usar Sort your variants
 
-1. Selecciona un Component Set que tenga exactamente 2 propiedades de variante
+1. Selecciona un Component Set
 2. Ejecuta Sort your variants desde el menú de plugins
-3. Presiona el botón "Organizar variantes"
-4. ¡Las variantes se organizarán automáticamente en una grilla!
+3. Asigna un rol a cada propiedad y ajusta el espaciado y el estilo de las etiquetas
+4. Presiona "Reorganize variants"
+
+"Reset" vuelve a los valores por defecto y los guarda en el Component Set seleccionado.
 
 ## Instalación para desarrollo
 
@@ -26,24 +33,22 @@ https://nodejs.org/en/download/
 
 ### Configuración
 
-1. Instala TypeScript globalmente:
-```bash
-npm install -g typescript
-```
-
-2. Instala las dependencias del proyecto:
+1. Instala las dependencias del proyecto:
 ```bash
 npm install
 ```
 
-3. Compila el código TypeScript:
+2. Compila el plugin (código + interfaz):
 ```bash
 npm run build
 ```
 
-4. Para desarrollo continuo, usa el modo watch:
+3. Para desarrollo continuo, en dos terminales:
 ```bash
 npm run watch
+```
+```bash
+npm run watch:ui
 ```
 
 ### Instalación en Figma
@@ -55,28 +60,19 @@ npm run watch
 
 ## Estructura del proyecto
 
-- `code.ts` - Lógica principal del plugin
-- `ui.html` - Interfaz de usuario
-- `ui.js` - JavaScript para la UI
+- `code.ts` - Lógica del plugin (se compila a `code.js`)
+- `src/ui/` - Interfaz: `ui.html`, `main.js`, `styles.css` e íconos
+- `dist/ui.html` - Interfaz compilada en un solo archivo (la que carga Figma)
+- `vite.config.mjs` - Build de la interfaz
 - `manifest.json` - Configuración del plugin
-- `package.json` - Dependencias y scripts
-- `tsconfig.json` - Configuración de TypeScript
+- `Figma UI Kit.html` - Referencia visual del diseño anterior
 
 ## Tecnologías
 
-- TypeScript
-- Figma Plugin API
-- NPM
+- TypeScript y Figma Plugin API
+- [FigUI3](https://github.com/rogie/figui3) para los controles con estilo Figma UI3. El núcleo es MIT; `fig-select` y el selector de color vienen del módulo editor, con licencia PolyForm Shield 1.0.0
+- Vite + vite-plugin-singlefile para empaquetar la interfaz
+- Íconos de Figma UI3 tomados de `@create-figma-plugin/ui` (MIT)
 
 Para más información sobre el desarrollo de plugins de Figma, visita:
 https://www.figma.com/plugin-docs/
-
-We recommend writing TypeScript code using Visual Studio code:
-
-1. Download Visual Studio Code if you haven't already: https://code.visualstudio.com/.
-2. Open this directory in Visual Studio Code.
-3. Compile TypeScript to JavaScript: Run the "Terminal > Run Build Task..." menu item,
-    then select "npm: watch". You will have to do this again every time
-    you reopen Visual Studio Code.
-
-That's it! Visual Studio Code will regenerate the JavaScript file every time you save.

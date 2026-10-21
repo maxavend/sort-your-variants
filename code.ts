@@ -6,6 +6,10 @@
 // 4. Columns Group now supports MULTIPLE properties (composed id; stable ordering).
 // 5. Added role normalization (alias & case-insensitive) for Column/Row/Col Group/Row Group.
 // 6. Removed all obsolete code related to 'propertyOrder' and drag-and-drop.
+// 7. UI rebuilt with FigUI3 (src/ui); plugin window uses Figma's theme colors.
+// 8. Errors while organizing are reported to the UI; hex colors and numbers are sanitized.
+// 9. Brace uses its own weight; preferences saved on a set are sent on selection.
+// 10. Tag groups are tracked by Component Set id and placed in the set's parent coordinate space.
 
 // ---------------- Debug helpers ----------------
 const DEBUG: boolean = false; // toggle to enable/disable verbose logging
@@ -34,6 +38,7 @@ interface TagOptions {
   braceEnabled: boolean;
   braceSide: 'left' | 'right' | 'auto';
   braceSource: ColorSource;
+  braceWeight: number;
   fontFamily?: string;
   fontStyle?: string;
 }
@@ -42,7 +47,7 @@ type StrokeCapableNode = GeometryMixin & BlendMixin & MinimalStrokesMixin & { st
 
 const DEFAULT_SPACING: SpacingPrefs = { padding: 48, gap: 48, groups: 128 };
 // MODIFICADO: 'order' key ya no se usa.
-const PLUGIN_KEYS = { spacing: 'spacing_preferences', tag: 'tag_options' } as const;
+const PLUGIN_KEYS = { spacing: 'spacing_preferences', tag: 'tag_options', tagsFor: 'tags_for' } as const;
 
 // Default Tag Options (robust, never undefined)
 const DEFAULT_TAG_OPTIONS: TagOptions = {
@@ -56,7 +61,8 @@ const DEFAULT_TAG_OPTIONS: TagOptions = {
   textSource: { type: 'hex', id: null, value: '#404040' },
   braceEnabled: true,
   braceSide: 'auto',
-  braceSource: { type: 'hex', id: null, value: '#D4D4D4' },
+  braceSource: { type: 'hex', id: null, value: '#A3A3A3' },
+  braceWeight: 1,
   fontFamily: 'Inter',
   fontStyle: 'Regular',
 };
@@ -68,7 +74,7 @@ const CONNECTOR = 12;
 // Distance between group brace and chips / between chip stacks
 const GROUP_CHIP_GAP = 24;
 
-figma.showUI(__html__, { width: 520, height: 600 });
+figma.showUI(__html__, { width: 360, height: 640, themeColors: true });
 
 // ---------------- Utilities ----------------
 function isComponentSet(node: SceneNode | null): node is ComponentSetNode { return !!node && node.type === 'COMPONENT_SET'; }
@@ -124,28 +130,46 @@ function _computeFallbackOrder(variantProps: VariantPropsMap): string[] {
   return tuples.map(t => t.k);
 }
 
-function rgbFromHex(hex: string): RGB { const h = hex.replace('#',''); const r = parseInt(h.slice(0,2), 16) / 255; const g = parseInt(h.slice(2,4), 16) / 255; const b = parseInt(h.slice(4,6), 16) / 255; return { r, g, b }; }
+function sanitizeHex(input: unknown, fallback: string): string {
+  let h = String(input === undefined || input === null ? '' : input).trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(h)) h = h.split('').map(ch => ch + ch).join('');
+  return /^[0-9a-fA-F]{6}$/.test(h) ? '#' + h.toUpperCase() : fallback;
+}
+
+function toNumber(input: unknown, fallback: number, min = 0): number {
+  if (input === undefined || input === null || input === '') return fallback;
+  const n = Number(input); return isFinite(n) ? Math.max(min, n) : fallback;
+}
+
+function parseJSON(raw: string): unknown { if (!raw) return undefined; try { return JSON.parse(raw); } catch (_e) { return undefined; } }
+
+function normalizeSpacing(raw: unknown): SpacingPrefs {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    padding: toNumber(r.padding, DEFAULT_SPACING.padding),
+    gap: toNumber(r.gap, DEFAULT_SPACING.gap),
+    groups: toNumber(r.groups, DEFAULT_SPACING.groups),
+  };
+}
+
+function rgbFromHex(hex: string): RGB { const h = sanitizeHex(hex, '#000000').slice(1); const r = parseInt(h.slice(0,2), 16) / 255; const g = parseInt(h.slice(2,4), 16) / 255; const b = parseInt(h.slice(4,6), 16) / 255; return { r, g, b }; }
 function toHexByte(n: number): string { const nn = Math.max(0, Math.min(255, Math.round(n))); const s = nn.toString(16); return s.length === 1 ? '0' + s : s; }
 function _rgbToHex(rgb: RGB): string { return '#' + toHexByte(rgb.r * 255) + toHexByte(rgb.g * 255) + toHexByte(rgb.b * 255); }
 
 function getPreferences(componentSet: ComponentSetNode) {
-  const savedSpacing = componentSet.getPluginData(PLUGIN_KEYS.spacing);
-  const savedTag = componentSet.getPluginData(PLUGIN_KEYS.tag);
-  const spacing = savedSpacing ? (JSON.parse(savedSpacing) as SpacingPrefs) : DEFAULT_SPACING;
-
-  // ELIMINADO: 'propertyOrder' ya no se guarda ni se usa.
-  
-  const parsedTag = savedTag ? JSON.parse(savedTag) : undefined;
-  const tagOptions = normalizeTagOptions(parsedTag);
-
-  return { spacing, tagOptions };
+  const savedSpacing = parseJSON(componentSet.getPluginData(PLUGIN_KEYS.spacing));
+  const savedTag = parseJSON(componentSet.getPluginData(PLUGIN_KEYS.tag));
+  return {
+    spacing: normalizeSpacing(savedSpacing),
+    tagOptions: normalizeTagOptions(savedTag),
+    hasSavedSpacing: savedSpacing !== undefined,
+    hasSavedTag: savedTag !== undefined,
+  };
 }
 
 function normalizeColorSource(input: unknown, fallbackHex: string): ColorSource {
-  const isCS = !!input && typeof input === 'object' && 'type' in (input as Record<string, unknown>);
-  if (isCS) return input as ColorSource;
-  const hex = String(input || fallbackHex).replace(/#/g, '');
-  return { type: 'hex', id: null, value: '#' + hex };
+  const value = input && typeof input === 'object' ? (input as Record<string, unknown>).value : input;
+  return { type: 'hex', id: null, value: sanitizeHex(value, fallbackHex) };
 }
 
 function normalizeTagOptions(raw: unknown): TagOptions {
@@ -164,13 +188,14 @@ function normalizeTagOptions(raw: unknown): TagOptions {
     fillSource: normalizeColorSource(fillVal ?? base.fillSource.value, base.fillSource.value),
     enableStroke: r.enableStroke === undefined ? base.enableStroke : Boolean(r.enableStroke),
     strokeSource: normalizeColorSource(strokeVal ?? base.strokeSource.value, base.strokeSource.value),
-    strokeWeight: Number(r.strokeWeight ?? base.strokeWeight),
-    cornerRadius: Number(r.cornerRadius ?? base.cornerRadius),
-    textSize: Number(r.textSize ?? base.textSize),
+    strokeWeight: toNumber(r.strokeWeight, base.strokeWeight),
+    cornerRadius: toNumber(r.cornerRadius, base.cornerRadius),
+    textSize: toNumber(r.textSize, base.textSize, 1),
     textSource: normalizeColorSource(textVal ?? base.textSource.value, base.textSource.value),
     braceEnabled: r.braceEnabled === undefined ? base.braceEnabled : (r.braceEnabled !== false),
     braceSide: (r.braceSide as 'left' | 'right' | 'auto') ?? base.braceSide,
     braceSource: normalizeColorSource(braceVal ?? base.braceSource.value, base.braceSource.value),
+    braceWeight: toNumber(r.braceWeight, base.braceWeight, 1),
     fontFamily: (r.fontFamily as string) || base.fontFamily,
     fontStyle: (r.fontStyle as string) || base.fontStyle,
   };
@@ -189,17 +214,41 @@ function ensureSetFreePositioning(componentSet: ComponentSetNode) {
   if (hasLayoutMode(componentSet) && componentSet.layoutMode !== 'NONE') { componentSet.layoutMode = 'NONE'; }
 }
 
-// Remove any prior debug overlays and tag groups for this ComponentSet across the page
+// Remove this ComponentSet's previous tag group (tracked by id), plus name-matched leftovers from older versions
 function cleanupDebugArtifacts(cs: ComponentSetNode) {
   const page = figma.currentPage;
-  const overlayName = `${cs.name} debug-overlay`;
-  const tagsName = `${cs.name} tags`;
-  const targets = page.findAll((n) =>
-    n.type === 'GROUP' && (n.name === overlayName || n.name === tagsName)
-  ) as GroupNode[];
-  for (const g of targets) {
+  const owned = page.findAllWithCriteria({ types: ['GROUP'], pluginData: { keys: [PLUGIN_KEYS.tagsFor] } });
+  for (const g of owned) {
+    if (g.getPluginData(PLUGIN_KEYS.tagsFor) === cs.id) { try { g.remove(); } catch (_) { /* noop */ } }
+  }
+  const legacyNames = [`${cs.name} debug-overlay`, `${cs.name} tags`];
+  const legacy = page.findAllWithCriteria({ types: ['GROUP'] }).filter((g) => legacyNames.indexOf(g.name) !== -1 && !g.getPluginData(PLUGIN_KEYS.tagsFor));
+  for (const g of legacy) {
     try { g.remove(); } catch (_) { /* noop */ }
   }
+}
+
+// ---------------- Placement helpers ----------------
+type TagParent = BaseNode & ChildrenMixin;
+function isAutoLayout(node: BaseNode | null): boolean { return hasLayoutMode(node) && node.layoutMode !== 'NONE'; }
+
+// Appends a node to the tag parent; inside auto layout it is taken out of the flow.
+function appendFree(parent: TagParent, node: SceneNode) {
+  parent.appendChild(node);
+  if (isAutoLayout(parent) && 'layoutPositioning' in node) node.layoutPositioning = 'ABSOLUTE';
+}
+
+// Groups nodes in place; inside auto layout the group is taken out of the flow and moved back where its children were.
+function groupFree(nodes: SceneNode[], parent: TagParent): GroupNode {
+  let minX = Infinity, minY = Infinity;
+  for (const n of nodes) { const b = n.absoluteBoundingBox; if (b) { minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); } }
+  const group = figma.group(nodes, parent);
+  if (isAutoLayout(parent)) {
+    group.layoutPositioning = 'ABSOLUTE';
+    const after = group.absoluteBoundingBox;
+    if (after && isFinite(minX) && isFinite(minY)) { group.x += minX - after.x; group.y += minY - after.y; }
+  }
+  return group;
 }
 
 // --- Role normalization helpers (alias & case-insensitive) ---
@@ -234,19 +283,24 @@ function snapshotSelection() {
     const preferences = getPreferences(cs);
     figma.ui.postMessage({
       type: 'selection-changed', componentSetId: cs.id, componentSetName: cs.name,
-      properties: properties, propertyKeys: Object.keys(properties), spacing: preferences.spacing,
-      // ELIMINADO: Ya no se envía 'propertyOrder'. La UI lo determina.
-      tagOptions: preferences.tagOptions,
+      properties: properties, propertyKeys: Object.keys(properties),
+      variantCount: cs.children.filter((n) => n.type === 'COMPONENT').length,
+      // Only preferences saved on this set are sent, so the UI keeps the last used ones otherwise
+      spacing: preferences.hasSavedSpacing ? preferences.spacing : null,
+      tagOptions: preferences.hasSavedTag ? preferences.tagOptions : null,
     });
   } else {
-    figma.ui.postMessage({ type: 'selection-changed', componentSetId: '', componentSetName: '', properties: {}, propertyKeys: [], spacing: DEFAULT_SPACING, propertyOrder: [] });
+    figma.ui.postMessage({ type: 'selection-changed', componentSetId: '', componentSetName: '', properties: {}, propertyKeys: [], spacing: null, tagOptions: null });
   }
 }
 setTimeout(snapshotSelection, 50);
 figma.on('selectionchange', snapshotSelection);
 
 // ---------------- Fonts & Tokens ----------------
-async function sendFontsToUI() { const fonts = await figma.listAvailableFontsAsync(); figma.ui.postMessage({ type: 'fonts-list', fonts }); }
+async function sendFontsToUI() {
+  try { const fonts = await figma.listAvailableFontsAsync(); figma.ui.postMessage({ type: 'fonts-list', fonts }); }
+  catch (e) { console.warn('listAvailableFontsAsync error:', e); }
+}
 
 // ---------------- Apply color helpers ----------------
 async function applyFillFromSource(node: GeometryMixin & BlendMixin & MinimalStrokesMixin, src: ColorSource, enable = true): Promise<void> {
@@ -266,8 +320,9 @@ async function applyTextColor(t: TextNode, src: ColorSource): Promise<void> {
 
 
 // ---------------- Tag chip factory ----------------
-async function createChip(textSegments: { characters: string, bold: boolean }[], tag: TagOptions, defaultFont: { family: string, style: string }, boldFont: { family: string, style: string }): Promise<FrameNode> {
+async function createChip(textSegments: { characters: string, bold: boolean }[], tag: TagOptions, defaultFont: { family: string, style: string }, boldFont: { family: string, style: string }, parent: TagParent): Promise<FrameNode> {
   const chip = figma.createFrame();
+  appendFree(parent, chip);
   chip.name = 'tag-chip';
   chip.layoutMode = 'HORIZONTAL';
   chip.primaryAxisAlignItems = 'CENTER';
@@ -341,6 +396,7 @@ async function organizeByRoles(
   dbg('organizeByRoles.roleMap.raw', roleMapRaw);
   // Normaliza roles (acepta alias y mayúsculas/espacios)
   const roleMap = normalizeRoleMap(roleMapRaw);
+  for (const k of Object.keys(roleMap)) if (!variantProps[k]) delete roleMap[k];
 
   // Extraer claves por rol
   const colKeys = Object.keys(roleMap).filter(k => roleMap[k] === 'column');
@@ -405,6 +461,31 @@ async function organizeByRoles(
 }
 
 // ---------------- Message handlers ----------------
+interface OrganizePayload { spacing?: unknown; roleMap?: Record<string, string>; tagOptions?: unknown }
+
+async function handleOrganize(payload: OrganizePayload): Promise<string | null> {
+  const sel = figma.currentPage.selection;
+  if (!(sel.length === 1 && isComponentSet(sel[0]))) return '⚠️ Select a Component Set';
+  const cs = sel[0];
+  if (!payload.roleMap) return '⚠️ Role map not provided.';
+
+  const spacing = normalizeSpacing(payload.spacing);
+  cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(spacing));
+  const normTag = normalizeTagOptions(payload.tagOptions ?? getPreferences(cs).tagOptions);
+  cs.setPluginData(PLUGIN_KEYS.tag, JSON.stringify(normTag));
+
+  // Persist last-used configuration locally so it can be restored when the UI reopens
+  try {
+    await figma.clientStorage.setAsync('syv_last_config', { roleMap: payload.roleMap, spacing, tagOptions: normTag });
+  } catch (e) {
+    console.warn('Failed to save last config:', e);
+  }
+
+  await loadCoreFonts({ family: normTag.fontFamily, style: normTag.fontStyle });
+  ensureSetFreePositioning(cs);
+  return await organizeByRoles(cs, payload.roleMap, spacing, normTag);
+}
+
 figma.ui.onmessage = async (msg: unknown) => {
   const m = msg as { type: string; [k: string]: unknown };
   if (m.type === 'ui-loaded') {
@@ -425,7 +506,7 @@ figma.ui.onmessage = async (msg: unknown) => {
   if (m.type === 'save-settings') {
     try {
   const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
-  const spacingToStore = payload.spacing || DEFAULT_SPACING;
+  const spacingToStore = normalizeSpacing(payload.spacing);
   const tagToStore = normalizeTagOptions(payload.tagOptions ?? DEFAULT_TAG_OPTIONS);
   const toStore = { spacing: spacingToStore, tagOptions: tagToStore };
   await figma.clientStorage.setAsync('syv_last_config', toStore);
@@ -438,7 +519,7 @@ figma.ui.onmessage = async (msg: unknown) => {
       if (sel.length === 1 && isComponentSet(sel[0])) {
         const cs = sel[0] as ComponentSetNode;
   const payload = m as { spacing?: Partial<SpacingPrefs>; tagOptions?: unknown };
-  if (payload.spacing) cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(payload.spacing));
+  if (payload.spacing) cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(normalizeSpacing(payload.spacing)));
   if (payload.tagOptions) cs.setPluginData(PLUGIN_KEYS.tag, JSON.stringify(normalizeTagOptions(payload.tagOptions)));
       }
     } catch (e) {
@@ -450,51 +531,12 @@ figma.ui.onmessage = async (msg: unknown) => {
   // ELIMINADO: El mensaje 'order-updated-ui' es obsoleto.
   
   if (m.type === 'organize-variants') {
-    const sel = figma.currentPage.selection;
-    if (!(sel.length === 1 && isComponentSet(sel[0]))) {
-      const msg = '⚠️ Select a Component Set';
-      figma.notify(msg);
-      figma.ui.postMessage({ type: 'organize-error', message: msg });
-      return;
-    }
-    const cs = sel[0];
-
-    // MODIFICADO: Espera 'roleMap' en lugar de 'propertyOrder'.
-    const payload = m as { spacing?: Partial<SpacingPrefs>; roleMap?: Record<string, string>; tagOptions?: unknown };
-
-    if (!payload.roleMap) {
-      const msg = '⚠️ Role map not provided.';
-      figma.notify(msg);
-      figma.ui.postMessage({ type: 'organize-error', message: msg });
-      return;
-    }
-
-    const spacing: SpacingPrefs = { ...DEFAULT_SPACING, ...(payload.spacing || {}) } as SpacingPrefs;
-  cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(spacing));
-    // ELIMINADO: ya no se guarda el orden.
-    
-    const currentPrefs = getPreferences(cs);
-    if (payload.tagOptions) {
-      cs.setPluginData(PLUGIN_KEYS.tag, JSON.stringify(normalizeTagOptions(payload.tagOptions)));
-    }
-
-    // Persist last-used configuration locally so it can be restored when the UI reopens
-    try {
-      await figma.clientStorage.setAsync('syv_last_config', { roleMap: payload.roleMap, spacing, tagOptions: payload.tagOptions ?? currentPrefs.tagOptions });
-    } catch (e) {
-      console.warn('Failed to save last config:', e);
-    }
-
-    const normTag = normalizeTagOptions(payload.tagOptions ?? currentPrefs.tagOptions);
-    await loadCoreFonts({ family: normTag.fontFamily, style: normTag.fontStyle });
-
-    ensureSetFreePositioning(cs);
-    
-    // MODIFICADO: Llama a la nueva función principal con el roleMap normalizado.
-    const error = await organizeByRoles(cs, payload.roleMap, spacing, normTag || undefined);
+    let error: string | null;
+    try { error = await handleOrganize(m as OrganizePayload); }
+    catch (e) { console.error(e); error = '⚠️ ' + (e instanceof Error ? e.message : String(e)); }
 
     if (error) {
-      figma.notify(error);
+      figma.notify(error, { error: true });
       figma.ui.postMessage({ type: 'organize-error', message: error });
     } else {
       figma.notify('✅ Variants organized');
@@ -686,9 +728,8 @@ async function organizeVariantsCoreV3(
 
   // Compute effective bounding rects for each variant (use absoluteRenderBounds when available)
   type EffRect = { absX: number; absY: number; width: number; height: number; localLeft: number; localTop: number };
-  const compAbs = componentSet.absoluteRenderBounds;
-  const compAbsX = compAbs ? compAbs.x : componentSet.x;
-  const compAbsY = compAbs ? compAbs.y : componentSet.y;
+  const compAbsX = componentSet.absoluteTransform[0][2];
+  const compAbsY = componentSet.absoluteTransform[1][2];
 
   const effRects: EffRect[] = variants.map((v) => {
     const abs = v.absoluteRenderBounds;
@@ -730,13 +771,6 @@ async function organizeVariantsCoreV3(
   const rowCenter: number[] = []; if (rowValues.length){ rowCenter[0]=rowHeights[0]/2; for (let r=1;r<rowValues.length;r++){ rowCenter[r]=rowCenter[r-1] + (rowHeights[r-1]/2) + gap + (rowHeights[r]/2); } }
   const blockH = Math.max(0, rowHeights.reduce((a,b)=>a+b,0) + gap * Math.max(0,rowValues.length-1));
   dbg('layout.metrics', { padding, gap, groupSpacing, blockW, blockH, cols: colValues.length, rows: rowValues.length });
-
-  // Remove any previous tag group for this Component Set (replace, don't stack)
-  if (componentSet.parent) {
-    const parent = componentSet.parent as (BaseNode & ChildrenMixin);
-    const prev = parent.children.filter((n) => n.type === 'GROUP' && n.name === `${componentSet.name} tags`) as GroupNode[];
-    prev.forEach((g) => g.remove());
-  }
 
   // Place each variant (logs per-node)
   for (let i = 0; i < variants.length; i++) {
@@ -798,6 +832,9 @@ async function organizeVariantsCoreV3(
   dbg('tags.start', { colValues: colValues.length, rowValues: rowValues.length, colGroupIds: colGroupIds.length, rowGroupIds: rowGroupIds.length });
   const parentContainer: BaseNode & ChildrenMixin = (componentSet.parent as (BaseNode & ChildrenMixin)) || (figma.currentPage as unknown as BaseNode & ChildrenMixin);
   const baseX = componentSet.x; const baseY = componentSet.y;
+  // Render bounds in the parent's coordinate space (baseX/baseY space), so they compare with x/y below
+  const originX = componentSet.absoluteTransform[0][2] - baseX; const originY = componentSet.absoluteTransform[1][2] - baseY;
+  const localBounds = (n: FrameNode | GroupNode | VectorNode): Rect | null => { const b = n.absoluteRenderBounds; return b ? { x: b.x - originX, y: b.y - originY, width: b.width, height: b.height } : null; };
   const tagsNodes: SceneNode[] = [];
 
   // Track the widest horizontal span of column chips across all groups
@@ -831,8 +868,7 @@ async function organizeVariantsCoreV3(
           const segs = isBooleanLiteral(v)
             ? [ { characters: `${colKey}`, bold: true }, { characters: `: ${v}` , bold: false } ]
             : [ { characters: v, bold: false } ];
-          const chip = await createChip(segs, tag, defaultFont, boldFont);
-          parentContainer.appendChild(chip);
+          const chip = await createChip(segs, tag, defaultFont, boldFont, parentContainer);
           chips.push(chip);
           preW[c] = chip.width; preH[c] = chip.height;
         }
@@ -854,7 +890,7 @@ async function organizeVariantsCoreV3(
               chip.x = centerX - preW[c] / 2;
               chip.y = baselineY - preH[c];
             }
-            const rb = chip.absoluteRenderBounds;
+            const rb = localBounds(chip);
             if (rb) {
               chip.x = centerX - (rb.width / 2);
               const currentBottom = rb.y + rb.height;
@@ -877,7 +913,7 @@ async function organizeVariantsCoreV3(
           for (let c = 0; c < chips.length - 1; c++) {
             const a = chips[c]; const b = chips[c+1];
             if (!a || !b) continue;
-            const rbA = a.absoluteRenderBounds; const rbB = b.absoluteRenderBounds;
+            const rbA = localBounds(a); const rbB = localBounds(b);
             if (!rbA || !rbB) continue;
             const centerA = rbA.x + rbA.width / 2; const centerB = rbB.x + rbB.width / 2;
             const gapCenters = Math.abs(centerB - centerA);
@@ -893,7 +929,7 @@ async function organizeVariantsCoreV3(
           const chip = chips[c];
           if (!chip) continue;
           const centerX = blockStartX + colCentersInBlock[c];
-          const rb = chip.absoluteRenderBounds;
+          const rb = localBounds(chip);
           if (rb) {
             chip.x = centerX - (rb.width / 2);
             const currentBottom = rb.y + rb.height;
@@ -909,7 +945,7 @@ async function organizeVariantsCoreV3(
         for (let c = 0; c < chips.length; c++) {
           const chip = chips[c];
           if (!chip) continue;
-          const rb = chip.absoluteRenderBounds;
+          const rb = localBounds(chip);
           if (!rb) continue;
           if (rb.x < minXChip) minXChip = rb.x;
           const right = rb.x + rb.width;
@@ -936,14 +972,14 @@ async function organizeVariantsCoreV3(
             if (i < parts.length - 1) segs.push({ characters: ', ', bold: false });
           }
           if (!allPlaceholders) {
-            const cgChip = await createChip(segs, tag, defaultFont, boldFont);
+            const cgChip = await createChip(segs, tag, defaultFont, boldFont, parentContainer);
 
             const topOfTopChipsY = baselineY - maxH; // top of tallest chip AFTER any rotation
             const targetChipBottom = topOfTopChipsY - TAG_GAP; // chip-to-chip spacing = TAG_GAP
 
             const centerX = blockStartX + blockW / 2;
             cgChip.x = centerX - cgChip.width / 2;
-            const rb0 = cgChip.absoluteRenderBounds;
+            const rb0 = localBounds(cgChip);
             if (rb0) {
               const dy = targetChipBottom - (rb0.y + rb0.height);
               cgChip.y = (cgChip.y || 0) + dy;
@@ -954,15 +990,16 @@ async function organizeVariantsCoreV3(
             }
 
             const brace = figma.createVector();
+            appendFree(parentContainer, brace);
             brace.vectorPaths = [{ windingRule: 'NONE', data: `M 0 ${CONNECTOR} L ${blockW} ${CONNECTOR} M ${blockW/2} 0 L ${blockW/2} ${CONNECTOR}` }];
-            await applyStrokeFromSource(brace, tag.braceSource, Math.max(1, tag.strokeWeight), tag.braceEnabled);
+            await applyStrokeFromSource(brace, tag.braceSource, tag.braceWeight, tag.braceEnabled);
             try { (brace as { strokeCap: StrokeCap | typeof figma.mixed }).strokeCap = 'ROUND'; } catch (_) { /* noop */ }
-            const rb1 = cgChip.absoluteRenderBounds;
+            const rb1 = localBounds(cgChip);
             const chipBottom = rb1 ? (rb1.y + rb1.height) : (cgChip.y + cgChip.height);
             brace.x = centerX - (blockW / 2);
             brace.y = chipBottom; // touching
 
-            const grouped = figma.group([brace, cgChip], parentContainer); grouped.name = 'col-group-chip';
+            const grouped = groupFree([brace, cgChip], parentContainer); grouped.name = 'col-group-chip';
             grouped.insertChild(0, brace); // brace atrás
             grouped.appendChild(cgChip);   // chip al frente
             tagsNodes.push(grouped);
@@ -989,22 +1026,21 @@ async function organizeVariantsCoreV3(
           const segs = isBooleanLiteral(v)
             ? [ { characters: `${rowKey}`, bold: true }, { characters: `: ${v}`, bold: false } ]
             : [ { characters: v, bold: false } ];
-          const chip = await createChip(segs, tag, defaultFont, boldFont);
+          const chip = await createChip(segs, tag, defaultFont, boldFont, parentContainer);
           const targetCenterY = baseY + yBand + rowCenter[r];
 
           // Posición tentativa a la izquierda (aprox), luego corregimos por bounds
           chip.x = targetRight - chip.width;
           chip.y = targetCenterY - chip.height / 2;
-          parentContainer.appendChild(chip);
 
-          const rb = chip.absoluteRenderBounds;
+          const rb = localBounds(chip);
           if (rb) {
             const currentRight = rb.x + rb.width;
             chip.x += (targetRight - currentRight);
             const currentCenterY = rb.y + rb.height / 2;
             chip.y += (targetCenterY - currentCenterY);
-            const newTop = chip.absoluteRenderBounds ? chip.absoluteRenderBounds.y : chip.y;
-            const newBottom = chip.absoluteRenderBounds ? (chip.absoluteRenderBounds.y + chip.absoluteRenderBounds.height) : (chip.y + chip.height);
+            const newTop = (localBounds(chip)?.y ?? chip.y);
+            const newBottom = ((localBounds(chip)?.y ?? chip.y) + (localBounds(chip)?.height ?? chip.height));
             if (newTop < rowsTop) rowsTop = newTop;
             if (newBottom > rowsBottom) rowsBottom = newBottom;
             const left = rb.x;
@@ -1021,15 +1057,15 @@ async function organizeVariantsCoreV3(
         if (rowChips.length) {
           // Sort by current top
           rowChips.sort((a,b) => {
-            const ta = a.absoluteRenderBounds ? a.absoluteRenderBounds.y : a.y;
-            const tb = b.absoluteRenderBounds ? b.absoluteRenderBounds.y : b.y;
+            const ta = (localBounds(a)?.y ?? a.y);
+            const tb = (localBounds(b)?.y ?? b.y);
             return ta - tb;
           });
           for (let i = 1; i < rowChips.length; i++) {
             const prev = rowChips[i-1]; const cur = rowChips[i];
-            const prevTop = prev.absoluteRenderBounds ? prev.absoluteRenderBounds.y : prev.y;
-            const prevH = prev.absoluteRenderBounds ? prev.absoluteRenderBounds.height : prev.height;
-            const curTop = cur.absoluteRenderBounds ? cur.absoluteRenderBounds.y : cur.y;
+            const prevTop = (localBounds(prev)?.y ?? prev.y);
+            const prevH = (localBounds(prev)?.height ?? prev.height);
+            const curTop = (localBounds(cur)?.y ?? cur.y);
             const requiredTop = prevTop + prevH + TAG_GAP;
             if (curTop < requiredTop) {
               const shift = requiredTop - curTop;
@@ -1066,7 +1102,7 @@ async function organizeVariantsCoreV3(
             if (i < keys.length - 1) textSegments.push({ characters: ', ', bold: false });
           }
           if (!allPlaceholders) {
-            const titleChip = await createChip(textSegments, tag, defaultFont, boldFont);
+            const titleChip = await createChip(textSegments, tag, defaultFont, boldFont, parentContainer);
 
             // El brace debe estar a GROUP_CHIP_GAP a la IZQUIERDA del CHIP DE ROW más ancho (referencia = borde IZQUIERDO mínimo)
             const braceRightX = (minRowChipLeft) - GROUP_CHIP_GAP;
@@ -1074,8 +1110,7 @@ async function organizeVariantsCoreV3(
             // Posicionar el chip pegado al brace (0px interno)
             titleChip.x = braceRightX - titleChip.width; // aproximación
             titleChip.y = rowsCenterY - titleChip.height / 2;
-            parentContainer.appendChild(titleChip);
-            const trb = titleChip.absoluteRenderBounds;
+            const trb = localBounds(titleChip);
             if (trb) {
               const tright = trb.x + trb.width;
               titleChip.x += (braceRightX - tright);
@@ -1085,12 +1120,13 @@ async function organizeVariantsCoreV3(
 
             // Brace vertical con la punta hacia la IZQUIERDA (180° respecto al horizontal superior)
             const braceVec = figma.createVector();
+            appendFree(parentContainer, braceVec);
             braceVec.vectorPaths = [{ windingRule: 'NONE', data: `M 0 0 L 0 ${rowsHeight} M -${CONNECTOR} ${rowsHeight/2} L 0 ${rowsHeight/2}` }];
             braceVec.x = braceRightX; braceVec.y = rowsTop;
-            await applyStrokeFromSource(braceVec, tag.braceSource, Math.max(1, tag.strokeWeight), tag.braceEnabled);
+            await applyStrokeFromSource(braceVec, tag.braceSource, tag.braceWeight, tag.braceEnabled);
             try { (braceVec as { strokeCap: StrokeCap | typeof figma.mixed }).strokeCap = 'ROUND'; } catch (_) { /* noop */ }
 
-            const groupChip = figma.group([braceVec, titleChip], parentContainer); groupChip.name = 'row-group-chip';
+            const groupChip = groupFree([braceVec, titleChip], parentContainer); groupChip.name = 'row-group-chip';
             groupChip.insertChild(0, braceVec); // brace atrás
             groupChip.appendChild(titleChip);   // chip al frente
             tagsNodes.push(groupChip);
@@ -1109,8 +1145,9 @@ async function organizeVariantsCoreV3(
 
   if (tagsNodes.length > 0) {
     const groupParent: BaseNode & ChildrenMixin = (componentSet.parent as (BaseNode & ChildrenMixin)) || (figma.currentPage as unknown as BaseNode & ChildrenMixin);
-    const tagGroup = figma.group(tagsNodes, groupParent);
+    const tagGroup = groupFree(tagsNodes, groupParent);
     tagGroup.name = `${componentSet.name} tags`;
+    tagGroup.setPluginData(PLUGIN_KEYS.tagsFor, componentSet.id);
   }
 
   return null;

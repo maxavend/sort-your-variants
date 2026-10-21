@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sort your variants</title>
+<!-- Inter for the UI, plus common families so the tag preview can render them -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Lato:wght@400;700;900&family=Montserrat:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Poppins:wght@400;500;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="plugin">
+  <div class="scroll">
+
+    <section class="section">
+      <fig-header borderless><h3>Component set</h3></fig-header>
+      <div id="selection" class="selection is-empty">
+        <span class="selection-icon" data-icon="componentSet"></span>
+        <span id="selectionName" class="selection-name">Select a component set</span>
+        <span id="selectionMeta" class="selection-meta"></span>
+      </div>
+    </section>
+
+    <section class="section" id="rolesSection">
+      <fig-header borderless><h3>Property roles</h3></fig-header>
+      <div id="roleList" class="prop-list" role="list"></div>
+      <p class="hint">One property is the columns and one the rows. Groups split the grid into blocks.</p>
+    </section>
+
+    <section class="section">
+      <fig-header borderless><h3>Spacing</h3></fig-header>
+      <div class="grid-3">
+        <fig-input-number id="padding" value="48" min="0" title="Padding" aria-label="Padding"><span slot="prepend" class="input-icon" data-icon="padding"></span></fig-input-number>
+        <fig-input-number id="gap" value="48" min="0" title="Gap between variants" aria-label="Gap between variants"><span slot="prepend" class="input-icon" data-icon="gap"></span></fig-input-number>
+        <fig-input-number id="groups" value="128" min="0" title="Space between groups" aria-label="Space between groups"><span slot="prepend" class="input-icon" data-icon="groups"></span></fig-input-number>
+      </div>
+    </section>
+
+    <section class="section" data-section="fill">
+      <fig-header borderless><h3>Fill</h3><fig-button variant="ghost" icon data-toggle="enableFill"><fig-icon name="minus"></fig-icon></fig-button></fig-header>
+      <div class="section-body grid-2">
+        <fig-input-color id="fillColor" value="#E5E5E5" text="true" alpha="false" aria-label="Fill color"></fig-input-color>
+        <fig-input-number id="radius" value="8" min="0" title="Corner radius" aria-label="Corner radius"><span slot="prepend" class="input-icon" data-icon="radius"></span></fig-input-number>
+      </div>
+    </section>
+
+    <section class="section" data-section="stroke">
+      <fig-header borderless><h3>Stroke</h3><fig-button variant="ghost" icon data-toggle="enableStroke"><fig-icon name="minus"></fig-icon></fig-button></fig-header>
+      <div class="section-body grid-2">
+        <fig-input-color id="strokeColor" value="#A3A3A3" text="true" alpha="false" aria-label="Stroke color"></fig-input-color>
+        <fig-input-number id="strokeWeight" value="1" min="0" title="Stroke weight" aria-label="Stroke weight"><span slot="prepend" class="input-icon" data-icon="weight"></span></fig-input-number>
+      </div>
+    </section>
+
+    <section class="section">
+      <fig-header borderless><h3>Typography</h3></fig-header>
+      <div class="stack">
+        <fig-select id="fontFamily" value="Inter" label="Font family" full variant="input"></fig-select>
+        <div class="grid-2">
+          <fig-select id="fontStyle" value="Regular" label="Font style" full variant="input"></fig-select>
+          <fig-input-number id="textSize" value="16" min="1" title="Font size" aria-label="Font size"><span slot="prepend" class="input-icon" data-icon="fontSize"></span></fig-input-number>
+        </div>
+        <fig-input-color id="textColor" value="#404040" text="true" alpha="false" aria-label="Text color"></fig-input-color>
+      </div>
+    </section>
+
+    <section class="section" data-section="brace">
+      <fig-header borderless><h3>Brace</h3><fig-button variant="ghost" icon data-toggle="braceEnabled"><fig-icon name="minus"></fig-icon></fig-button></fig-header>
+      <div class="section-body grid-2">
+        <fig-input-color id="braceColor" value="#A3A3A3" text="true" alpha="false" aria-label="Brace color"></fig-input-color>
+        <fig-input-number id="braceWeight" value="1" min="1" title="Brace weight" aria-label="Brace weight"><span slot="prepend" class="input-icon" data-icon="weight"></span></fig-input-number>
+      </div>
+    </section>
+
+    <section class="section section--last">
+      <fig-header borderless><h3>Preview</h3></fig-header>
+      <div class="preview" aria-hidden="true">
+        <div class="preview-group">
+          <span class="chip" data-chip><b>Type</b>: Primary</span>
+          <span class="brace" id="previewBrace"><span class="brace-tick"></span></span>
+          <span class="preview-rows">
+            <span class="chip" data-chip>Default</span>
+            <span class="chip" data-chip>Hover</span>
+          </span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="footer">
+    <fig-button id="resetBtn" variant="secondary">Reset</fig-button>
+    <fig-button id="organizeBtn" variant="primary" disabled>Reorganize variants</fig-button>
+  </footer>
+</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
