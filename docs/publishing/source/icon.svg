@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Sort your variants: a variant grid with column/row tags -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A866FF"/>
+      <stop offset="1" stop-color="#7B2FF2"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <!-- column tags -->
+  <rect x="50" y="22" width="22" height="9" rx="4.5" fill="#FFFFFF" fill-opacity="0.55"/>
+  <rect x="80" y="22" width="22" height="9" rx="4.5" fill="#FFFFFF" fill-opacity="0.55"/>
+  <!-- row tags -->
+  <rect x="20" y="48" width="22" height="9" rx="4.5" fill="#FFFFFF" fill-opacity="0.55"/>
+  <rect x="20" y="78" width="22" height="9" rx="4.5" fill="#FFFFFF" fill-opacity="0.55"/>
+  <!-- component set frame (dashed, like Figma) -->
+  <rect x="46" y="38" width="62" height="62" rx="8" fill="none" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="2" stroke-dasharray="4 3"/>
+  <!-- variants -->
+  <rect x="53" y="45" width="20" height="20" rx="5" fill="#FFFFFF"/>
+  <rect x="81" y="45" width="20" height="20" rx="5" fill="#FFFFFF"/>
+  <rect x="53" y="73" width="20" height="20" rx="5" fill="#FFFFFF"/>
+  <rect x="81" y="73" width="20" height="20" rx="5" fill="#FFFFFF"/>
+</svg>

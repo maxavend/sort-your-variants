@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sort your variants · Community cover</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Render at 1920x1080 (cover) or ?gallery for the UI gallery image:
+     Chrome --headless --window-size=1920,1080 --screenshot=cover.png cover.html -->
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, sans-serif; }
+  body { background: radial-gradient(1200px 800px at 85% 20%, #3b1f6e 0%, #1e1e1e 60%); color: #fff; }
+  .wrap { position: absolute; inset: 0; display: grid; grid-template-columns: 760px 1fr; align-items: center; padding: 0 120px; gap: 60px; }
+  .copy img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 12px 40px rgba(123,47,242,.45); }
+  h1 { font-size: 96px; line-height: 1; letter-spacing: -0.03em; margin: 40px 0 24px; font-weight: 700; }
+  p { font-size: 34px; line-height: 1.35; color: #d6d6d6; margin: 0; max-width: 680px; }
+  .pills { display: flex; gap: 12px; margin-top: 40px; flex-wrap: wrap; }
+  .pill { font-size: 22px; padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,.08); color: #eee; border: 1px solid rgba(255,255,255,.12); }
+  .stage { position: relative; height: 900px; }
+  /* organized grid mock */
+  .canvas { position: absolute; left: 0; top: 150px; width: 640px; height: 600px; border-radius: 24px; background: #f5f5f5; box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+  .set { position: absolute; left: 190px; top: 150px; width: 400px; height: 400px; border: 3px dashed #9747ff; border-radius: 12px; }
+  .v { position: absolute; width: 104px; height: 44px; border-radius: 10px; background: #2c2c2c; }
+  .v.alt { background: #9747ff; }
+  .v.ghost { background: #d9d9d9; }
+  .chip { position: absolute; font-size: 18px; padding: 8px 10px; border-radius: 8px; background: #e5e5e5; color: #404040; box-shadow: inset 0 0 0 1.5px #a3a3a3; white-space: nowrap; }
+  .ui { position: absolute; right: 0; top: 30px; width: 400px; border-radius: 22px; overflow: hidden; box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08); }
+  .ui img { display: block; width: 400px; }
+  body.gallery { background: #6b6b6b; }
+  body.gallery .wrap { display: flex; justify-content: center; gap: 56px; padding: 0; }
+  body.gallery .shot { width: 420px; height: 960px; border-radius: 22px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  body.gallery .shot img { width: 420px; display: block; }
+</style>
+</head>
+<body>
+<div class="wrap" id="cover">
+  <div class="copy">
+    <img src="../icon.png" alt="">
+    <h1>Sort your variants</h1>
+    <p>Lay out any component set as a clean, labeled grid in one click.</p>
+    <div class="pills"><span class="pill">Columns &amp; rows</span><span class="pill">Grouped blocks</span><span class="pill">Styled labels</span></div>
+  </div>
+  <div class="stage">
+    <div class="canvas">
+      <span class="chip" style="left:236px;top:96px">Small</span>
+      <span class="chip" style="left:352px;top:96px">Medium</span>
+      <span class="chip" style="left:488px;top:96px">Large</span>
+      <span class="chip" style="left:60px;top:190px">Default</span>
+      <span class="chip" style="left:76px;top:282px">Hover</span>
+      <span class="chip" style="left:44px;top:374px">Disabled</span>
+      <div class="set">
+        <div class="v" style="left:22px;top:30px"></div><div class="v" style="left:148px;top:30px"></div><div class="v" style="left:274px;top:30px"></div>
+        <div class="v alt" style="left:22px;top:122px"></div><div class="v alt" style="left:148px;top:122px"></div><div class="v alt" style="left:274px;top:122px"></div>
+        <div class="v ghost" style="left:22px;top:214px"></div><div class="v ghost" style="left:148px;top:214px"></div><div class="v ghost" style="left:274px;top:214px"></div>
+      </div>
+    </div>
+    <div class="ui"><img src="ui-dark.png" alt=""></div>
+  </div>
+</div>
+<div class="wrap" id="gallery" hidden>
+  <div class="shot"><img src="ui-dark-full.png" alt=""></div>
+  <div class="shot"><img src="ui-light-full.png" alt=""></div>
+</div>
+<script>
+  if (location.search.includes('gallery')) {
+    document.body.classList.add('gallery')
+    document.getElementById('cover').hidden = true
+    document.getElementById('gallery').hidden = false
+  }
+</script>
+</body>
+</html>

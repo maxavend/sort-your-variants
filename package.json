@@ -10,7 +10,8 @@
     "watch": "tsc -p tsconfig.json --watch",
     "watch:ui": "vite build --watch",
     "lint": "eslint --ext .ts,.tsx --ignore-pattern node_modules --ignore-pattern dist .",
-    "lint:fix": "eslint --ext .ts,.tsx --ignore-pattern node_modules --ignore-pattern dist --fix ."
+    "lint:fix": "eslint --ext .ts,.tsx --ignore-pattern node_modules --ignore-pattern dist --fix .",
+    "release:check": "npm run lint && npm run build && node scripts/check-release.mjs"
   },
   "author": "",
   "license": "",

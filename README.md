@@ -58,6 +58,14 @@ npm run watch:ui
 3. Selecciona el archivo `manifest.json` de este proyecto
 4. ¡Sort your variants ya está listo para usar!
 
+### Publicar en la Comunidad de Figma
+
+```bash
+npm run release:check
+```
+
+Corre el lint, compila y verifica que el plugin esté listo. Los pasos, los textos de la ficha y los gráficos están en [docs/publishing](docs/publishing/README.md).
+
 ## Estructura del proyecto
 
 - `code.ts` - Lógica del plugin (se compila a `code.js`)
@@ -65,7 +73,9 @@ npm run watch:ui
 - `dist/ui.html` - Interfaz compilada en un solo archivo (la que carga Figma)
 - `vite.config.mjs` - Build de la interfaz
 - `manifest.json` - Configuración del plugin
-- `Figma UI Kit.html` - Referencia visual del diseño anterior
+- `scripts/check-release.mjs` - Verificación previa a publicar
+- `docs/publishing/` - Ícono, portada, textos y checklist para la Comunidad de Figma
+- `docs/reference/Figma UI Kit.html` - Referencia visual del diseño anterior
 
 ## Tecnologías
 

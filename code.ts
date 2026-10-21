@@ -439,8 +439,8 @@ async function organizeByRoles(
   }
 
   // Validación final: Debe existir exactamente 1 Column y 1 Row (incluyendo sintéticos)
-  if (colKeys.length !== 1) return '⚠️ Debe haber exactamente 1 "Column" asignado.';
-  if (rowKeys.length !== 1) return '⚠️ Debe haber exactamente 1 "Row" asignado.';
+  if (colKeys.length !== 1) return '⚠️ Assign exactly one property as Column.';
+  if (rowKeys.length !== 1) return '⚠️ Assign exactly one property as Row.';
 
   const colKey = colKeys[0];
   const rowKey = rowKeys[0];
@@ -465,9 +465,9 @@ interface OrganizePayload { spacing?: unknown; roleMap?: Record<string, string>;
 
 async function handleOrganize(payload: OrganizePayload): Promise<string | null> {
   const sel = figma.currentPage.selection;
-  if (!(sel.length === 1 && isComponentSet(sel[0]))) return '⚠️ Select a Component Set';
+  if (!(sel.length === 1 && isComponentSet(sel[0]))) return '⚠️ Select a component set';
   const cs = sel[0];
-  if (!payload.roleMap) return '⚠️ Role map not provided.';
+  if (!payload.roleMap) return '⚠️ Assign a role to each property.';
 
   const spacing = normalizeSpacing(payload.spacing);
   cs.setPluginData(PLUGIN_KEYS.spacing, JSON.stringify(spacing));
