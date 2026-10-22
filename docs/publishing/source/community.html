@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Sort your variants · Community images</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
-<!-- One page, five 1920x1080 images. Pick one with ?s=cover | before-after | roles | labels | ui
+<!-- One page, eight 1920x1080 images. Pick one with ?s=cover | before-after | steps | roles | groups | labels | ui | closing
      Render commands are in docs/publishing/README.md. -->
 <style>
   :root {
@@ -53,6 +53,19 @@
   .panel { position: absolute; border-radius: 22px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 30px 80px rgba(0,0,0,.16); background: #fff; }
   .panel img { position: absolute; left: 0; display: block; }
   .panel.dark { box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 30px 80px rgba(0,0,0,.3); background: #2c2c2c; }
+  /* how-it-works cards */
+  .step-copy { position: absolute; left: 48px; right: 48px; top: 452px; }
+  .step-copy b { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 20px; margin-bottom: 20px; }
+  .step-copy strong { display: block; font-size: 30px; letter-spacing: -0.018em; line-height: 1.15; }
+  .step-copy span { display: block; font-size: 22px; color: var(--muted); margin-top: 8px; }
+  .role-list { position: absolute; left: 48px; right: 48px; top: 64px; display: grid; gap: 14px; }
+  .role-list div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .role-list p { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .role-list small { display: block; font-size: 16px; font-weight: 400; color: var(--muted); margin-top: 4px; }
+  .role-list em { font-style: normal; font-size: 18px; font-weight: 600; padding: 8px 14px; border-radius: 10px; white-space: nowrap;
+    background: color-mix(in srgb, var(--c) 14%, white); box-shadow: inset 0 0 0 1.5px var(--c); }
+  .selection { position: absolute; border: 2px solid #0D99FF; }
+  .selection i { position: absolute; width: 10px; height: 10px; background: #fff; border: 2px solid #0D99FF; }
   .arrow { position: absolute; width: 72px; height: 72px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; box-shadow: 0 12px 30px rgba(0,0,0,.2); }
 </style>
 </head>
@@ -87,7 +100,31 @@
   <div class="card" style="left:1000px; top:384px; width:800px; height:616px"><div class="stage" data-grid="sorted" data-pad="48" data-sync="1"></div></div>
 </section>
 
-<!-- 3. Roles -->
+<!-- 3. How it works -->
+<section class="slide" id="steps" hidden>
+  <div style="position:absolute; left:0; right:0; top:92px; text-align:center">
+    <h2>Select. Assign. Reorganize.</h2>
+    <p class="lede" style="margin-top:22px">Three steps, and the whole set reads at a glance.</p>
+  </div>
+  <div class="card step" style="left:120px; top:340px; width:536px; height:644px">
+    <div class="stage" data-grid="selected" data-pad="40" style="bottom:204px"></div>
+    <div class="step-copy"><b>1</b><strong>Select a component set.</strong><span>Any set, with one or more variant properties.</span></div>
+  </div>
+  <div class="card step" style="left:692px; top:340px; width:536px; height:644px">
+    <div class="role-list">
+      <div><p>Size<small>Small, Medium, Large</small></p><em style="--c:var(--orange)">Column</em></div>
+      <div><p>State<small>Default, Hover, Pressed, Disabled</small></p><em style="--c:var(--pink)">Row</em></div>
+      <div><p>Type<small>Primary, Secondary</small></p><em style="--c:var(--blue)">Row group</em></div>
+    </div>
+    <div class="step-copy"><b>2</b><strong>Assign a role to each property.</strong><span>Column, Row, Col group or Row group.</span></div>
+  </div>
+  <div class="card step" style="left:1264px; top:340px; width:536px; height:644px">
+    <div class="stage" data-grid="step-sorted" data-pad="40" style="bottom:204px"></div>
+    <div class="step-copy"><b>3</b><strong>Click Reorganize variants.</strong><span>Variants move into place and get their labels.</span></div>
+  </div>
+</section>
+
+<!-- 4. Roles -->
 <section class="slide" id="roles" hidden>
   <div style="position:absolute; left:128px; top:150px; width:640px">
     <div class="eyebrow">Property roles</div>
@@ -102,7 +139,16 @@
   <div class="card" style="left:860px; top:96px; width:940px; height:888px"><div class="stage" data-grid="roles" data-pad="64"></div></div>
 </section>
 
-<!-- 4. Labels -->
+<!-- 5. Column groups -->
+<section class="slide" id="groups" hidden>
+  <div style="position:absolute; left:0; right:0; top:92px; text-align:center">
+    <h2>Big sets, split into blocks.</h2>
+    <p class="lede" style="margin-top:22px">Group columns or rows by any property. Each block gets its own label.</p>
+  </div>
+  <div class="card" style="left:120px; top:340px; width:1680px; height:644px"><div class="stage" data-grid="col-groups" data-pad="56"></div></div>
+</section>
+
+<!-- 6. Labels -->
 <section class="slide" id="labels" hidden>
   <div style="position:absolute; left:0; right:0; top:92px; text-align:center">
     <h2>Labels that match your file.</h2>
@@ -116,7 +162,7 @@
   <div class="card" style="left:1264px; top:424px; width:536px; height:560px"><div class="stage" data-grid="label-rotate" data-pad="44"></div></div>
 </section>
 
-<!-- 5. UI -->
+<!-- 7. UI -->
 <section class="slide" id="ui" hidden>
   <div style="position:absolute; left:128px; top:300px; width:700px">
     <div class="eyebrow">Built with Figma's own UI</div>
@@ -128,6 +174,15 @@
   </div>
   <div class="panel dark" style="left:1380px; top:80px; width:420px; height:1000px; border-radius:22px 22px 0 0">
     <img src="ui-dark-full.png" style="width:420px; top:0" alt="">
+  </div>
+</section>
+
+<!-- 8. Closing -->
+<section class="slide" id="closing" hidden>
+  <div style="position:absolute; left:0; right:0; top:300px; text-align:center">
+    <img src="../../brand/logo/sort-your-variants-icon.svg" width="224" height="224" alt="" style="display:block; margin:0 auto 56px; filter: drop-shadow(0 22px 44px rgba(0,0,0,.14))">
+    <h1>Your variants, in order.</h1>
+    <p class="lede" style="margin-top:28px">Find Sort your variants in Figma under Plugins.</p>
   </div>
 </section>
 
@@ -214,7 +269,7 @@ function sortedGrid(board, o = {}) {
 }
 
 // What a fresh component set looks like: one wrapped row in creation order, no labels.
-function messyGrid(board, types = TYPES) {
+function messyGrid(board, types = TYPES, selected = false) {
   const all = [];
   types.forEach(t => STATES.forEach(st => SIZES.forEach(s => all.push({ t, st, s }))));
   // deterministic shuffle
@@ -227,8 +282,46 @@ function messyGrid(board, types = TYPES) {
     button(board, v.s, v.st, v.t, x, y);
     x += v.s.w + gap; rowH = Math.max(rowH, v.s.h); n++; maxX = Math.max(maxX, x);
   });
-  el(board, 'set', { left: 0, top: 0, width: (maxX - gap + pad) + 'px', height: (y + rowH + pad) + 'px' });
+  const w = maxX - gap + pad, h = y + rowH + pad;
+  if (selected) { // Figma's selection box with corner handles
+    const s = el(board, 'selection', { left: '-1px', top: '-1px', width: (w + 2) + 'px', height: (h + 2) + 'px' });
+    for (const [l, t] of [[0, 0], [1, 0], [0, 1], [1, 1]]) s.insertAdjacentHTML('beforeend', `<i style="left:calc(${l * 100}% - 7px); top:calc(${t * 100}% - 7px)"></i>`);
+  } else {
+    el(board, 'set', { left: 0, top: 0, width: w + 'px', height: h + 'px' });
+  }
+  el(board, 'set-name', selected ? { color: '#0D99FF' } : {}, selected ? 'Button' : '<i></i>Button');
+}
+
+// Size = Column, State = Row, Type = Col group: blocks side by side, each with a chip and a horizontal brace.
+function colGroupGrid(board, o = {}) {
+  const sizes = SIZES, states = o.states || THREE, groups = TYPES, tint = o.tint || {};
+  const blockW = sizes.reduce((a, s) => a + s.w, 0) + (sizes.length - 1) * GAP;
+  const blockX = g => PAD + g * (blockW + GROUP_GAP);
+  const setW = PAD * 2 + groups.length * blockW + (groups.length - 1) * GROUP_GAP;
+  const setH = PAD * 2 + states.length * ROW_H + (states.length - 1) * GAP;
+  el(board, 'set', { left: 0, top: 0, width: setW + 'px', height: setH + 'px' });
   el(board, 'set-name', {}, '<i></i>Button');
+  const rowY = r => PAD + r * (ROW_H + GAP);
+  groups.forEach((t, g) => {
+    let x = blockX(g); let chipTop = 0;
+    sizes.forEach(s => {
+      states.forEach((st, r) => button(board, s, st, t, x, rowY(r) + (ROW_H - s.h) / 2));
+      const ch = chip(board, s.v, tint.col);
+      ch.style.left = (x + s.w / 2 - ch.offsetWidth / 2) + 'px';
+      chipTop = -TAG_GAP - ch.offsetHeight; ch.style.top = chipTop + 'px';
+      x += s.w + GAP;
+    });
+    const bc = tint.braceColor || '#A3A3A3', cx = blockX(g) + blockW / 2;
+    const gc = chip(board, `<b>Type</b>: ${t}`, tint.group);
+    const gcBottom = chipTop - TAG_GAP;
+    gc.style.left = (cx - gc.offsetWidth / 2) + 'px'; gc.style.top = (gcBottom - gc.offsetHeight) + 'px';
+    el(board, 'brace', { left: blockX(g) + 'px', top: (gcBottom + CONNECTOR) + 'px', width: blockW + 'px', height: '1px', background: bc });
+    el(board, 'brace', { left: cx + 'px', top: gcBottom + 'px', width: '1px', height: CONNECTOR + 'px', background: bc });
+  });
+  states.forEach((st, r) => {
+    const ch = chip(board, st, tint.row);
+    ch.style.left = (-TAG_GAP - ch.offsetWidth) + 'px'; ch.style.top = (rowY(r) + ROW_H / 2 - ch.offsetHeight / 2) + 'px';
+  });
 }
 
 function tintVars(color) {
@@ -239,6 +332,9 @@ const GRIDS = {
   cover: b => sortedGrid(b, { states: THREE }),
   sorted: b => sortedGrid(b, { types: ['Primary'] }),
   messy: b => messyGrid(b, ['Primary']),
+  selected: b => messyGrid(b, ['Primary'], true),
+  'step-sorted': b => sortedGrid(b, { types: ['Primary'], states: THREE }),
+  'col-groups': b => colGroupGrid(b, { tint: { col: tintVars('#FF9500'), row: tintVars('#FF2D55'), group: tintVars('#AF52DE'), braceColor: '#AF52DE' } }),
   roles: b => sortedGrid(b, { states: THREE, tint: { col: tintVars('#FF9500'), row: tintVars('#FF2D55'), group: tintVars('#0A84FF'), braceColor: '#0A84FF' } }),
   'label-default': b => sortedGrid(b, { types: ['Primary'], states: THREE }),
   'label-custom': b => sortedGrid(b, { types: ['Primary'], states: THREE,

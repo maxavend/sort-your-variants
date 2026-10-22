@@ -7,11 +7,14 @@ Todo lo necesario para publicar el plugin desde Figma Desktop. Figma solo acepta
 | Archivo | Uso en el modal de publicación |
 |---|---|
 | `icon.png` | Ícono del plugin (128 × 128) |
-| `cover.png` | Portada (1920 × 1080) |
-| `gallery-1-before-after.png` | Carrusel 1: un set desordenado y el mismo set ordenado y etiquetado |
-| `gallery-2-roles.png` | Carrusel 2: los cuatro roles de propiedad (Column, Row, Col group, Row group) |
-| `gallery-3-labels.png` | Carrusel 3: estilo por defecto, estilo propio y etiquetas rotadas |
-| `gallery-4-ui.png` | Carrusel 4: la interfaz en tema claro y oscuro |
+| `cover.png` | Portada (1920 × 1080) y primera imagen del carrusel |
+| `gallery-1-before-after.png` | Carrusel 2: un set desordenado y el mismo set ordenado y etiquetado |
+| `gallery-2-how-it-works.png` | Carrusel 3: los tres pasos (seleccionar, asignar roles, reorganizar) |
+| `gallery-3-roles.png` | Carrusel 4: los cuatro roles de propiedad (Column, Row, Col group, Row group) |
+| `gallery-4-groups.png` | Carrusel 5: un set dividido en bloques con Col group |
+| `gallery-5-labels.png` | Carrusel 6: estilo por defecto, estilo propio y etiquetas rotadas |
+| `gallery-6-ui.png` | Carrusel 7: la interfaz en tema claro y oscuro |
+| `gallery-7-closing.png` | Carrusel 8: cierre con el ícono |
 | `source/` | Fuentes editables: `icon.svg`, `community.html` (portada y carrusel) y las capturas de la interfaz |
 
 > Antes de subir los gráficos, compara sus medidas con las que indica el modal de publicación. Si Figma pide otras, ajusta `source/community.html` y vuelve a renderizar (ver "Regenerar los gráficos").
@@ -85,10 +88,10 @@ Agrega un correo o un enlace (por ejemplo, la página de issues del repositorio)
 - **Íconos de Figma UI3:** tomados de `@create-figma-plugin/ui` (MIT).
 
 ## Regenerar los gráficos
-Desde `docs/publishing/`, con Google Chrome instalado. `source/community.html` dibuja cada imagen según `?s=`: `cover`, `before-after`, `roles`, `labels` o `ui`. Las grillas se arman con las mismas medidas que usa el plugin (padding 48, gap 48, grupos 128, etiquetas a 24).
+Desde `docs/publishing/`, con Google Chrome instalado. `source/community.html` dibuja cada imagen según `?s=`: `cover`, `before-after`, `steps`, `roles`, `groups`, `labels`, `ui` o `closing`. Las grillas se arman con las mismas medidas que usa el plugin (padding 48, gap 48, grupos 128, etiquetas a 24).
 
 ```bash
-for s in cover:cover before-after:gallery-1-before-after roles:gallery-2-roles labels:gallery-3-labels ui:gallery-4-ui; do "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1920,1080 --allow-file-access-from-files --virtual-time-budget=8000 --screenshot="$PWD/${s#*:}.png" "file://$PWD/source/community.html?s=${s%%:*}"; done
+for s in cover:cover before-after:gallery-1-before-after steps:gallery-2-how-it-works roles:gallery-3-roles groups:gallery-4-groups labels:gallery-5-labels ui:gallery-6-ui closing:gallery-7-closing; do "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1920,1080 --allow-file-access-from-files --virtual-time-budget=8000 --screenshot="$PWD/${s#*:}.png" "file://$PWD/source/community.html?s=${s%%:*}"; done
 ```
 
 El ícono sale de `source/icon.svg`, que es una copia de `docs/brand/logo/sort-your-variants-icon.svg` a 128 × 128:
